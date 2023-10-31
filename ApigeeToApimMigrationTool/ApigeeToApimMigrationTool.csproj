@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net7.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<PublishSingleFile>false</PublishSingleFile>
+		<SelfContained>true</SelfContained>
+		<!--<RuntimeIdentifier>win10-x64</RuntimeIdentifier>-->
+		<!--<RuntimeIdentifier>linux-x64</RuntimeIdentifier>-->
+		<RuntimeIdentifiers>win10-x64;linux-x64</RuntimeIdentifiers>
+		<!--<RuntimeIdentifiers>win10-x64</RuntimeIdentifiers>-->
+		<PlatformTarget>AnyCPU</PlatformTarget>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="Azure.ResourceManager.ApiManagement" Version="1.0.1" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration" Version="7.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.4" />
+	  <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="7.0.0" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ApigeeToApimMigrationTool.DataAccess\ApigeeToApimMigrationTool.DataAccess.csproj" />
+	  <ProjectReference Include="..\ApigeeToAzureApimMigrationTool.Core\ApigeeToAzureApimMigrationTool.Core.csproj" />
+	  <ProjectReference Include="..\ApigeeToAzureApimMigrationTool.Logic\ApigeeToAzureApimMigrationTool.Service.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="appsettings.json">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+</Project>
