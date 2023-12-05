@@ -16,9 +16,10 @@ using Newtonsoft.Json;
 using System.Drawing.Text;
 using System.Reflection;
 using static System.Net.Mime.MediaTypeNames;
+using System;
 
 string apigeeOrganizationName = null, apigeeManagementApiBaseUrl = null, apigeeAuthenticationBaseUrl = null, username = null, password = null, proxyOrProduct, proxyOrProductName, azureAppId, azurePassword, azureTenantId, azureSubscriptionId,
-    apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null;
+    apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null, environment = null, keyVaultName = null;
 string oauthConfigName = null, backendAppId = null, azureAdTenentId = null;
 bool usePasscode = false;
 
@@ -78,13 +79,19 @@ if (Environment.GetCommandLineArgs().Count() == 1)
         apimName = apimConfig.ApimName;
         apimResourceGroupName = apimConfig.ApimResourceGroupName;
     }
-    Console.WriteLine("Enter Oauth configuration name");
+    Console.WriteLine("Enter Oauth configuration name (optional)");
     oauthConfigName = Console.ReadLine();
-    Console.WriteLine("Enter backend app registration ID");
+    Console.WriteLine("Enter backend app registration ID (optional)");
     backendAppId = Console.ReadLine();
 
-    Console.WriteLine("Use Passcode to authenticate to Apigee?");
-    usePasscode = bool.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Apigee environment name");
+    environment = Console.ReadLine();
+
+    Console.WriteLine("Enter Azure Key Vault name you'd like to use for named values in APIM (optional)");
+    keyVaultName = Console.ReadLine();
+
+    Console.WriteLine("Use Passcode to authenticate to Apigee?(Y[yes], N[no]");
+    usePasscode = Console.ReadLine().Equals("y", StringComparison.OrdinalIgnoreCase);
     if (usePasscode)
     {
         Console.WriteLine("Enter Apigee passcode");
@@ -124,6 +131,8 @@ else
     oauthConfigName = Environment.GetCommandLineArgs().Count() >= 16 ? Environment.GetCommandLineArgs()[15] : string.Empty;
     backendAppId = Environment.GetCommandLineArgs().Count() >= 17 ? Environment.GetCommandLineArgs()[16] : string.Empty;
     azureAdTenentId = Environment.GetCommandLineArgs().Count() == 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
+    environment = Environment.GetCommandLineArgs().Count() >= 17 ? Environment.GetCommandLineArgs()[16] : string.Empty;
+    keyVaultName = Environment.GetCommandLineArgs().Count() >= 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
 
 }
 
