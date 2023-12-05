@@ -39,28 +39,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
 {
     public class AzureApimService : IAzureApimService
     {
-        private readonly ArmClient _client;
         private readonly IApigeeManagementApiService _apiService;
-        private readonly string _authToken;
+        private readonly IApimProvider _apimProvider;
+        private readonly string _apimUrl;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
-        private readonly string _apiUrl;
-        private readonly HttpClient _httpClient;
-        private readonly string _tenantId;
-        private readonly string _clientId;
-        private readonly string _clientSecret;
-        private readonly string _subscriptionId;
 
-        public AzureApimService(string subscriptionId, string tenantId, string clientId, string clientSecret, IApigeeManagementApiService apiService, string apimUrl)
+        public AzureApimService(IApigeeManagementApiService apiService, IApimProvider apimProvider, string apimUrl)
         {
-            _client = new ArmClient(new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret));
-            _subscriptionId = subscriptionId;
-            _tenantId = tenantId;
-            _clientId = clientId;
-            _clientSecret = clientSecret;
             _apiService = apiService;
-            _apiUrl = apimUrl;
+            _apimProvider = apimProvider;
             _policyVariables = new List<KeyValuePair<string, string>>();
-            _httpClient = new HttpClient();
+            _apimUrl = apimUrl;
         }
         public async Task ImportApi(string apimName, string apimUrl, string resourceGroupName, string bundlePath, string proxyName, string brearToken, string oauthConfigName, string backendAppId, string azureAdTenentId)
         {
@@ -87,7 +76,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var defaultApiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpointElements.First().Value}.xml"));
             string ApiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
 
-            var apiResource = await CreateApi(apiName, apimUrl, displayName, description, apimName, resourceGroupName, revision, ApiBasePath, endpointUrl, oauthConfigName);
+            var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, resourceGroupName, revision, ApiBasePath, endpointUrl, oauthConfigName);
 
             var rawApiLevelPolicyXml = RawPolicyXml();
 
@@ -341,25 +330,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         }
 
-        public async Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string resourceGroupName, string apimName)
-        {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-            ApiManagementProductCollection apiProducts = apimResource.GetApiManagementProducts();
-            var apiProduct = await apiProducts.CreateOrUpdateAsync(WaitUntil.Completed, name.Trim().Replace(" ", "_"), new ApiManagementProductData
-            {
-                Description = description,
-                DisplayName = displayName,
-                State = ApiManagementProductState.Published
-            });
-
-            ApiManagementProductResource apiProductResource = _client.GetApiManagementProductResource(apiProduct.Value.Id);
-
-            return apiProductResource;
-        }
 
         public async Task AddApiToProduct(ApiManagementProductResource apiProductResource, string apiId)
         {
@@ -367,85 +337,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
 
         #region Private Methods
-        private async Task CreatePolicyFragment(string policyFragmentName, string apimName, string apimResourceGroupName, string policyFragmentXml, string policyFragmentDescription)
-        {
-            var body = new
-            {
-                properties = new
-                {
-                    value = policyFragmentXml,
-                    description = policyFragmentDescription,
-                    format = "rawxml"
-                }
-            };
-            _httpClient.DefaultRequestHeaders.Clear();
-            var token = await GetAccessToken();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-            var response = await _httpClient.PutAsJsonAsync($"https://management.azure.com/subscriptions/{_subscriptionId}/resourceGroups/{apimResourceGroupName}/providers/Microsoft.ApiManagement/service/{apimName}/policyFragments/{policyFragmentName}?api-version=2023-03-01-preview", body);
-            if (!response.IsSuccessStatusCode)
-                throw new Exception($"can't create Policy Fragment. Status code: {response.StatusCode} - {response.Content.ToString()}");
-
-            Thread.Sleep(5000);
-        }
-        private async Task<string> GetAccessToken()
-        {
-            var credentials = new ClientSecretCredential(_tenantId, _clientId, _clientSecret);
-            var result = await credentials.GetTokenAsync(new TokenRequestContext(new[] { "https://management.azure.com/.default" }), CancellationToken.None);
-            return result.Token;
-        }
-        private async Task<ApiResource> CreateApi(string apiName, string apimUrl, string apiDisplayName, string apiDescription, string apimName, string resourceGroupName,
-                string revision, string apiPath, string backendUrl, string oauthConfigurationName = null)
-        {
-            try
-            {
-                var subscriptions = _client.GetSubscriptions();
-                SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-                ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-                ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-                ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-                ApiCollection apiCollection = apimResource.GetApis();
-                if (!backendUrl.Contains("http"))
-                {
-                    backendUrl = apimUrl + backendUrl;
-                }
-                var api = new ApiCreateOrUpdateContent
-                {
-                    ApiRevision = revision,
-                    ApiType = ApiType.Http,
-                    DisplayName = apiDisplayName,
-                    Description = apiDescription,
-                    Path = apiPath,
-                    ServiceUri = new Uri(backendUrl),
-                    IsSubscriptionRequired = false,
-                    IsCurrent = true,
-                    Protocols =
-                    {
-                        ApiOperationInvokableProtocol.Https
-                    }
-                };
-
-                if (!string.IsNullOrEmpty(oauthConfigurationName))
-                {
-                    AuthenticationSettingsContract authenticationSetting = new AuthenticationSettingsContract();
-                    authenticationSetting.OAuth2 = new OAuth2AuthenticationSettingsContract()
-                    {
-                        AuthorizationServerId = oauthConfigurationName
-                    };
-                    api.AuthenticationSettings = authenticationSetting;
-                }
-
-                var importedApi = await apiCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, apiName.Trim().Replace(" ", ""), api);
-
-                ApiResource apiResource = _client.GetApiResource(importedApi.Value.Id);
-
-                return apiResource;
-
-            }
-            catch (Exception)
-            {
-                throw;
-            }
-        }
         private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string resourceGroupName, string apimName, string brearToken)
         {
             var rawPolicyFragment = RawPolicyFragmentXml();
@@ -472,7 +363,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     XElement newPolicy;
                     await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, resourceGroupName, condition, policyName, brearToken);
                 }
-                await CreatePolicyFragment(sharedFlowName, apimName, resourceGroupName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
+                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, resourceGroupName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }
         private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string apimResourceGroupName, string condition, string apigeePolicyDisplayName, string brearToken)
@@ -514,7 +405,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     apimPolicyElement.Add(ValidateJwt(element, condition));
                     break;
                 case "ServiceCallout":
-                    apimPolicyElement.Add(SendRequest(element, _apiUrl, condition));
+                    apimPolicyElement.Add(SendRequest(element, _apimUrl, condition));
                     break;
                 case "ExtractVariables":
                     apimPolicyElement.Add(ExtractJsonValue(element, apigeePolicyDisplayName, condition));

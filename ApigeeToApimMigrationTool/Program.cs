@@ -143,12 +143,17 @@ builder.Services.AddSingleton<IApigeeManagementApiService, ApigeeManagementApiSe
 
 builder.Services.AddSingleton<IAzureApimService, AzureApimService>(
     serviceProvider => new AzureApimService(
-     subscriptionId: azureSubscriptionId,
-     tenantId: azureTenantId,
-     clientId: azureAppId,
-     clientSecret: azurePassword,
      apiService: serviceProvider.GetRequiredService<IApigeeManagementApiService>(),
+     apimProvider: serviceProvider.GetRequiredService<IApimProvider>(),
      apimUrl: apimUrl));
+
+builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
+    serviceProvider => new AzureApimProvider(
+             subscriptionId: azureSubscriptionId,
+                    tenantId: azureTenantId,
+                           clientId: azureAppId,
+                                  clientSecret: azurePassword,
+                                         apimUrl: apimUrl));
 
 using IHost host = builder.Build();
 
@@ -165,31 +170,32 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
 
     using IServiceScope serviceScope = hostProvider.CreateScope();
     IServiceProvider provider = serviceScope.ServiceProvider;
-    var _apigeeManagementApiService = provider.GetRequiredService<IApigeeManagementApiService>();
-    var _azureApimService = provider.GetRequiredService<IAzureApimService>();
+
+    var apigeeManagementApiService = provider.GetRequiredService<IApigeeManagementApiService>();
+    var azureApimService = provider.GetRequiredService<IAzureApimService>();
 
     Console.WriteLine("get the bearer toekn for Apigee management API ...");
     string bearerToken;
     if (usePasscode)
     {
         //get the token using passcode
-        bearerToken = await _apigeeManagementApiService.GetAuthenticationToken(passcode, apigeeAuthenticationBaseUrl);
+        bearerToken = await apigeeManagementApiService.GetAuthenticationToken(passcode, apigeeAuthenticationBaseUrl);
     }
     else
     {
         //get the token using usrname and password
-        bearerToken = await _apigeeManagementApiService.GetAuthenticationToken(username, password, apigeeAuthenticationBaseUrl);
+        bearerToken = await apigeeManagementApiService.GetAuthenticationToken(username, password, apigeeAuthenticationBaseUrl);
     }
 
     if (proxyOrProduct.ToLower().Equals("product"))
     {
-        var apigeeProduct = await _apigeeManagementApiService.GetApiProductByName(proxyOrProductName, bearerToken);
+        var apigeeProduct = await apigeeManagementApiService.GetApiProductByName(proxyOrProductName, bearerToken);
         var apigeeProductName = apigeeProduct.Name.Trim().Replace(" ", "-").ToLower();
-        var apimApiProduct = await _azureApimService.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimResourceGroupName, apimName);
+        var apimApiProduct = await azureApimService.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimResourceGroupName, apimName);
         foreach (var proxy in apigeeProduct.Proxies)
         {
             await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenentId);
-            await _azureApimService.AddApiToProduct(apimApiProduct, proxy);
+            await azureApimService.AddApiToProduct(apimApiProduct, proxy);
         }
         Console.WriteLine($"API product {proxyOrProductName} and all API proxies belonging to this product are successfully migrated to Azure APIM!");
     }
