@@ -19,7 +19,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 string apigeeOrganizationName = null, apigeeManagementApiBaseUrl = null, apigeeAuthenticationBaseUrl = null, username = null, password = null, proxyOrProduct, proxyOrProductName, azureAppId, azurePassword, azureTenantId, azureSubscriptionId,
     apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null;
-string oauthConfigName = null, backendAppId = null, azureAdTenentId = null;
+string oauthConfigName = null, backendAppId = null, azureAdTenantId = null;
 bool usePasscode = false;
 
 AzureCredentials azureCredentials = null;
@@ -123,7 +123,7 @@ else
 
     oauthConfigName = Environment.GetCommandLineArgs().Count() >= 16 ? Environment.GetCommandLineArgs()[15] : string.Empty;
     backendAppId = Environment.GetCommandLineArgs().Count() >= 17 ? Environment.GetCommandLineArgs()[16] : string.Empty;
-    azureAdTenentId = Environment.GetCommandLineArgs().Count() == 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
+    azureAdTenantId = Environment.GetCommandLineArgs().Count() == 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
 
 }
 
@@ -173,8 +173,9 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
 
     var apigeeManagementApiService = provider.GetRequiredService<IApigeeManagementApiService>();
     var azureApimService = provider.GetRequiredService<IAzureApimService>();
+    var azureApimProvider = provider.GetRequiredService<IApimProvider>();
 
-    Console.WriteLine("get the bearer toekn for Apigee management API ...");
+    Console.WriteLine("get the bearer token for Apigee management API ...");
     string bearerToken;
     if (usePasscode)
     {
@@ -183,7 +184,7 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
     }
     else
     {
-        //get the token using usrname and password
+        //get the token using username and password
         bearerToken = await apigeeManagementApiService.GetAuthenticationToken(username, password, apigeeAuthenticationBaseUrl);
     }
 
@@ -191,17 +192,17 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
     {
         var apigeeProduct = await apigeeManagementApiService.GetApiProductByName(proxyOrProductName, bearerToken);
         var apigeeProductName = apigeeProduct.Name.Trim().Replace(" ", "-").ToLower();
-        var apimApiProduct = await azureApimService.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimResourceGroupName, apimName);
+        var apimApiProduct = await azureApimProvider.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimResourceGroupName, apimName);
         foreach (var proxy in apigeeProduct.Proxies)
         {
-            await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenentId);
+            await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenantId);
             await azureApimService.AddApiToProduct(apimApiProduct, proxy);
         }
         Console.WriteLine($"API product {proxyOrProductName} and all API proxies belonging to this product are successfully migrated to Azure APIM!");
     }
     else
     {
-        await MigrateApiProxy(hostProvider, bearerToken, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenentId);
+        await MigrateApiProxy(hostProvider, bearerToken, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenantId);
         Console.WriteLine($"API proxy {proxyOrProductName} is successfully migrated to Azure APIM!");
     }
     Environment.Exit(0);
