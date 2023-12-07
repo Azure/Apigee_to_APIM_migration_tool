@@ -51,7 +51,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyVariables = new List<KeyValuePair<string, string>>();
             _apimUrl = apimUrl;
         }
-        public async Task ImportApi(string apimName, string apimUrl, string resourceGroupName, string bundlePath, string proxyName, string brearToken, string oauthConfigName, string backendAppId, string azureAdTenentId)
+        public async Task ImportApi(string apimName, string bundlePath, string proxyName, string bearerToken, string oauthConfigName)
         {
             var apiProxyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", $"{proxyName}.xml"));
             var apiProxyElement = apiProxyXml.Element("APIProxy");
@@ -76,7 +76,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var defaultApiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpointElements.First().Value}.xml"));
             string ApiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
 
-            var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, resourceGroupName, revision, ApiBasePath, endpointUrl, oauthConfigName);
+            var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, revision, ApiBasePath, endpointUrl, oauthConfigName);
 
             var rawApiLevelPolicyXml = RawPolicyXml();
 
@@ -102,7 +102,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, condition, policyName, bearerToken);
 
                 }
 
@@ -116,7 +116,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, condition, policyName, bearerToken);
                 }
 
                 //get pre-flow response policies
@@ -129,7 +129,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, condition, policyName, bearerToken);
 
                 }
 
@@ -143,7 +143,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, condition, policyName, bearerToken);
                 }
             }
 
@@ -161,7 +161,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, condition, policyName, bearerToken);
 
                 }
 
@@ -175,7 +175,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, condition, policyName, bearerToken);
                 }
 
                 //get pre-flow response policies
@@ -188,7 +188,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, condition, policyName, bearerToken);
 
                 }
 
@@ -202,7 +202,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, condition, policyName, bearerToken);
                 }
             }
 
@@ -239,7 +239,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                             var rootElement = policyXml.Root;
                             XElement newPolicy;
 
-                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, operationCondition, policyName, brearToken);
+                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("inbound"), apimName, operationCondition, policyName, bearerToken);
                         }
 
                         //get flow response policies
@@ -252,7 +252,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                             var rootElement = policyXml.Root;
                             XElement newPolicy;
 
-                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, operationCondition, policyName, brearToken);
+                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("outbound"), apimName, operationCondition, policyName, bearerToken);
                         }
 
                         string OperationName = flow.Attribute("name").Value;
@@ -337,7 +337,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
 
         #region Private Methods
-        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string resourceGroupName, string apimName, string brearToken)
+        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string apimName, string brearToken)
         {
             var rawPolicyFragment = RawPolicyFragmentXml();
 
@@ -361,12 +361,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var policyXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", "policies", $"{policyName}.xml"));
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, condition, policyName, brearToken);
                 }
-                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, resourceGroupName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
+                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }
-        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string apimResourceGroupName, string condition, string apigeePolicyDisplayName, string brearToken)
+        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName, string brearToken)
         {
             switch (apigeePolicyName)
             {
@@ -419,7 +419,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 case "FlowCallout":
                     string sharedFlowName = element.Element("SharedFlowBundle").Value;
                     string sharedFlowBundlePath = await DownloadSharedFlow(sharedFlowName, brearToken);
-                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimResourceGroupName, apimName, brearToken);
+                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimName, brearToken);
                     apimPolicyElement.Add(IncludeFragment(sharedFlowName, condition));
                     break;
                     //default:

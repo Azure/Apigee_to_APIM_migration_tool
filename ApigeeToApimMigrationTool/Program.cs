@@ -150,10 +150,11 @@ builder.Services.AddSingleton<IAzureApimService, AzureApimService>(
 builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
     serviceProvider => new AzureApimProvider(
              subscriptionId: azureSubscriptionId,
-                    tenantId: azureTenantId,
-                           clientId: azureAppId,
-                                  clientSecret: azurePassword,
-                                         apimUrl: apimUrl));
+                tenantId: azureTenantId,
+                clientId: azureAppId,
+                clientSecret: azurePassword,
+                resourceGroupName: apimResourceGroupName,
+                apimUrl: apimUrl));
 
 using IHost host = builder.Build();
 
@@ -192,7 +193,7 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
     {
         var apigeeProduct = await apigeeManagementApiService.GetApiProductByName(proxyOrProductName, bearerToken);
         var apigeeProductName = apigeeProduct.Name.Trim().Replace(" ", "-").ToLower();
-        var apimApiProduct = await azureApimProvider.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimResourceGroupName, apimName);
+        var apimApiProduct = await azureApimProvider.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimName);
         foreach (var proxy in apigeeProduct.Proxies)
         {
             await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenantId);
@@ -224,7 +225,7 @@ async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, st
     string bundlePath = await _apigeeManagementApiService.DownloadApiProxyBundle(proxyOrProductName, maxRevision, bearerToken);
     // import the proxy into Azure APO,
     Console.WriteLine($"Migrating API proxy {proxyOrProductName} to Azure APIM");
-    await _azureApimService.ImportApi(apimName, apimUrl, apimResourceGroupName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName, backendAppId, azureAdTenentId);
+    await _azureApimService.ImportApi(apimName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName);
 }
 
 

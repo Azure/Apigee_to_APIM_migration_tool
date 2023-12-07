@@ -24,20 +24,22 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly string _tenantId;
         private readonly string _clientId;
         private readonly string _clientSecret;
+        private readonly string _resourceGroupName;
         private readonly string _subscriptionId;
 
-        public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string apimUrl)
+        public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimUrl)
         {
             _client = new ArmClient(new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret));
             _subscriptionId = subscriptionId;
             _tenantId = tenantId;
             _clientId = clientId;
             _clientSecret = clientSecret;
+            _resourceGroupName = resourceGroupName;
             _apiUrl = apimUrl;
             _httpClient = new HttpClient();
         }
 
-        public async Task<ApiResource> CreateApi(string apiName, string apiDisplayName, string apiDescription, string apimName, string resourceGroupName,
+        public async Task<ApiResource> CreateApi(string apiName, string apiDisplayName, string apiDescription, string apimName,
             string revision, string apiPath, string backendUrl, string? oauthConfigurationName = null)
         {
             try
@@ -45,7 +47,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 var subscriptions = _client.GetSubscriptions();
                 SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
                 ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-                ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
+                ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
                 ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
                 ApiCollection apiCollection = apimResource.GetApis();
                 if (!backendUrl.Contains("http"))
@@ -91,12 +93,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
             }
         }
 
-        public async Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string resourceGroupName, string apimName)
+        public async Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string apimName)
         {
             var subscriptions = _client.GetSubscriptions();
             SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
             ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
+            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
             ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
             ApiManagementProductCollection apiProducts = apimResource.GetApiManagementProducts();
             var apiProduct = await apiProducts.CreateOrUpdateAsync(WaitUntil.Completed, name.Trim().Replace(" ", "_"), new ApiManagementProductData
@@ -112,7 +114,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
 
 
-        public async Task CreatePolicyFragment(string policyFragmentName, string apimName, string apimResourceGroupName, string policyFragmentXml, string policyFragmentDescription)
+        public async Task CreatePolicyFragment(string policyFragmentName, string apimName, string policyFragmentXml, string policyFragmentDescription)
         {
             var body = new
             {
@@ -126,7 +128,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _httpClient.DefaultRequestHeaders.Clear();
             var token = await GetAccessToken();
             _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-            var response = await _httpClient.PutAsJsonAsync($"https://management.azure.com/subscriptions/{_subscriptionId}/resourceGroups/{apimResourceGroupName}/providers/Microsoft.ApiManagement/service/{apimName}/policyFragments/{policyFragmentName}?api-version=2023-03-01-preview", body);
+            var response = await _httpClient.PutAsJsonAsync($"https://management.azure.com/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/Microsoft.ApiManagement/service/{apimName}/policyFragments/{policyFragmentName}?api-version=2023-03-01-preview", body);
             if (!response.IsSuccessStatusCode)
                 throw new Exception($"can't create Policy Fragment. Status code: {response.StatusCode} - {response.Content.ToString()}");
 
