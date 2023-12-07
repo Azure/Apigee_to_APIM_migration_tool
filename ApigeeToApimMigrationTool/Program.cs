@@ -236,8 +236,7 @@ async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, st
     string bundlePath = await _apigeeManagementApiService.DownloadApiProxyBundle(proxyOrProductName, maxRevision, bearerToken);
     // import the proxy into Azure APO,
     Console.WriteLine($"Migrating API proxy {proxyOrProductName} to Azure APIM");
-    await _azureApimService.ImportApi(apimName, apimUrl, apimResourceGroupName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName, 
-        backendAppId, azureAdTenentId, environment, keyVaultName);
+    await _azureApimService.ImportApi(apimName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName, environment, keyVaultName);
 }
 
 

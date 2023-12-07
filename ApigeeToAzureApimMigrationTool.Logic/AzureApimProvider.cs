@@ -210,6 +210,41 @@ namespace ApigeeToAzureApimMigrationTool.Service
             Thread.Sleep(5000);
         }
 
+        public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
+        {
+            var subscriptions = _client.GetSubscriptions();
+            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
+            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
+            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
+            ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
+            string namedValueName = $"{mapIdentifier}-{keyName}";
+            var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
+            {
+                DisplayName = namedValueName,
+                Tags = { proxyName, mapIdentifier }
+            };
+            if (isSecret)
+            {
+                namedValueContent.IsSecret = true;
+                {
+                    if (!string.IsNullOrEmpty(keyVaultName))
+                    {
+                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
+                    }
+                    else
+                    {
+                        namedValueContent.Value = "MUST-BE-UPDATED";
+                    }
+                }
+            }
+            else
+                namedValueContent.Value = value;
+
+            await namedValues.CreateOrUpdateAsync(WaitUntil.Completed, namedValueName, namedValueContent);
+        }
+
+
         private async Task<string> GetAccessToken()
         {
             var credentials = new ClientSecretCredential(_tenantId, _clientId, _clientSecret);

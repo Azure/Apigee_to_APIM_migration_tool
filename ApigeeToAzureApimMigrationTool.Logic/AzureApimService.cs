@@ -15,6 +15,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly string _apimUrl;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
 
+        private string _apigeeAuthToken;
+        private string _apigeeEnvironmentName;
+        private string _azureKeyVaultName;
+        private string _apigeeProxyName;
+
         public AzureApimService(IApigeeManagementApiService apiService, IApimProvider apimProvider, string apimUrl)
         {
             _apiService = apiService;
@@ -22,9 +27,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyVariables = new List<KeyValuePair<string, string>>();
             _apimUrl = apimUrl;
         }
-        public async Task ImportApi(string apimName, string bundlePath, string proxyName, string bearerToken, string oauthConfigName)
+        public async Task ImportApi(string apimName, string bundlePath, string proxyName, string bearerToken, string oauthConfigName, string environment, string keyVaultName)
         {
-            _apigeeAuthToken = brearToken;
+            _apigeeAuthToken = bearerToken;
             _apigeeEnvironmentName = environment;
             _azureKeyVaultName = keyVaultName;
             _apigeeProxyName = proxyName;
@@ -355,7 +360,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     apimPolicyElement.Add(CacheLookupValue(element, apigeePolicyDisplayName, condition));
                     break;
                 case "KeyValueMapOperations":
-                    foreach (var setVariableElement in await SetVariable(element, _apigeeProxyName, apimName, apimResourceGroupName, apigeePolicyDisplayName, condition))
+                    foreach (var setVariableElement in await SetVariable(element, _apigeeProxyName, apimName, apigeePolicyDisplayName, condition))
                         apimPolicyElement.Add(setVariableElement);
                     break;
                 case "VerifyJWT":
@@ -454,7 +459,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
             return ApplyConditionToPolicy(condition, newPolicy);
         }
-        private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string resourceGroupName, string policyName, string condition = null)
+        private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string policyName, string condition = null)
         {
             XDocument setVariablePolicies = new XDocument();
             setVariablePolicies.Add(new XElement("Root"));
@@ -475,7 +480,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                         var keyValueMapEntry = apigeeKeyValueMap.Entry.FirstOrDefault(x => x.Name.Equals(key));
                         if (keyValueMapEntry == null)
                             throw new Exception($"Can't find entry {key} under mapIdentifier {mapIdentifier} in Apigee");
-                        await AddNamedValue(resourceGroupName, apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, keyValueMapEntry.Value, _azureKeyVaultName);
+                        await _apimProvider.AddNamedValue(apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, keyValueMapEntry.Value, _azureKeyVaultName);
                     }
 
                     string namedValueName = $"{mapIdentifier}-{key}";
@@ -749,40 +754,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string rawFragment = @"<fragment></fragment>";
 
             return XDocument.Parse(rawFragment);
-        }
-
-        private async Task AddNamedValue(string resourceGroupName, string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
-        {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-            ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
-            string namedValueName = $"{mapIdentifier}-{keyName}";
-            var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
-            {
-                DisplayName = namedValueName,
-                Tags = { proxyName, mapIdentifier }
-            };
-            if (isSecret)
-            {
-                namedValueContent.IsSecret = true;
-                {
-                    if (!string.IsNullOrEmpty(keyVaultName))
-                    {
-                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
-                    }
-                    else
-                    {
-                        namedValueContent.Value = "MUST-BE-UPDATED";
-                    }
-                }
-            }
-            else
-                namedValueContent.Value = value;
-
-            await namedValues.CreateOrUpdateAsync(WaitUntil.Completed, namedValueName, namedValueContent);
         }
 
         private string GetDataTypeFromStringValue(string str)

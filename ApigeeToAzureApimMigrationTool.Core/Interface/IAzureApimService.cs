@@ -4,7 +4,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IAzureApimService
     {
-        Task ImportApi(string apimName, string bundlePath, string proxyName, string brearToken, string oauthConfigName);
+        Task ImportApi(string apimName, string bundlePath, string proxyName, string brearToken, string oauthConfigName, string environment, string keyVaultName);
     }
 
 }
