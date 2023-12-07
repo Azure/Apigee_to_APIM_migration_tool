@@ -16,10 +16,11 @@ using Newtonsoft.Json;
 using System.Drawing.Text;
 using System.Reflection;
 using static System.Net.Mime.MediaTypeNames;
+using System;
 
 string apigeeOrganizationName = null, apigeeManagementApiBaseUrl = null, apigeeAuthenticationBaseUrl = null, username = null, password = null, proxyOrProduct, proxyOrProductName, azureAppId, azurePassword, azureTenantId, azureSubscriptionId,
-    apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null;
-string oauthConfigName = null, backendAppId = null, azureAdTenantId = null;
+    apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null, environment = null, keyVaultName = null;
+string oauthConfigName = null, backendAppId = null, azureAdTenentId = null;
 bool usePasscode = false;
 
 AzureCredentials azureCredentials = null;
@@ -31,9 +32,9 @@ Console.WriteLine("Starting up ...");
 
 if (Environment.GetCommandLineArgs().Count() == 1)
 {
-    Console.WriteLine("Enter Apigee's management API base URL");
+    Console.WriteLine("Enter Apigee's management API base URL (ex: https://api.enterprise.apigee.com");
     apigeeManagementApiBaseUrl = Console.ReadLine();
-    Console.WriteLine("Enter Apigee's authentication base URL");
+    Console.WriteLine("Enter Apigee's authentication base URL (ex: https://yourcompanyname.login.apigee.com");
     apigeeAuthenticationBaseUrl = Console.ReadLine();
     Console.WriteLine("Enter Apigee organization name");
     apigeeOrganizationName = Console.ReadLine();
@@ -57,7 +58,7 @@ if (Environment.GetCommandLineArgs().Count() == 1)
         apimUrl = Console.ReadLine();
         Console.WriteLine("Enter Azure APIM name");
         apimName = Console.ReadLine();
-        Console.WriteLine("Enter Azure APIMresource group name");
+        Console.WriteLine("Enter Azure APIM resource group name");
         apimResourceGroupName = Console.ReadLine();
     }
     else
@@ -78,16 +79,22 @@ if (Environment.GetCommandLineArgs().Count() == 1)
         apimName = apimConfig.ApimName;
         apimResourceGroupName = apimConfig.ApimResourceGroupName;
     }
-    Console.WriteLine("Enter Oauth configuration name");
+    Console.WriteLine("Enter Oauth configuration name (optional)");
     oauthConfigName = Console.ReadLine();
-    Console.WriteLine("Enter backend app registration ID");
+    Console.WriteLine("Enter backend app registration ID (optional)");
     backendAppId = Console.ReadLine();
 
-    Console.WriteLine("Use Passcode to authenticate to Apigee?");
-    usePasscode = bool.Parse(Console.ReadLine());
+    Console.WriteLine("Enter Apigee environment name");
+    environment = Console.ReadLine();
+
+    Console.WriteLine("Enter Azure Key Vault name you'd like to use for named values in APIM (optional)");
+    keyVaultName = Console.ReadLine();
+
+    Console.WriteLine("Use Passcode to authenticate to Apigee?(Y[yes], N[no]");
+    usePasscode = Console.ReadLine().Equals("y", StringComparison.OrdinalIgnoreCase) || Console.ReadLine().Equals("yes", StringComparison.OrdinalIgnoreCase);
     if (usePasscode)
     {
-        Console.WriteLine("Enter Apigee passcode");
+        Console.WriteLine("Enter Apigee passcode (can be retrieved from this URL: https://yourcompanyname.login.apigee.com/passcode");
         passcode = Console.ReadLine();
     }
     else
@@ -123,7 +130,9 @@ else
 
     oauthConfigName = Environment.GetCommandLineArgs().Count() >= 16 ? Environment.GetCommandLineArgs()[15] : string.Empty;
     backendAppId = Environment.GetCommandLineArgs().Count() >= 17 ? Environment.GetCommandLineArgs()[16] : string.Empty;
-    azureAdTenantId = Environment.GetCommandLineArgs().Count() == 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
+    azureAdTenentId = Environment.GetCommandLineArgs().Count() == 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
+    environment = Environment.GetCommandLineArgs().Count() >= 17 ? Environment.GetCommandLineArgs()[16] : string.Empty;
+    keyVaultName = Environment.GetCommandLineArgs().Count() >= 18 ? Environment.GetCommandLineArgs()[17] : string.Empty;
 
 }
 
@@ -158,13 +167,14 @@ builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
 
 using IHost host = builder.Build();
 
-await Migrate(host.Services, username, password, proxyOrProduct, proxyOrProductName, oauthConfigName, backendAppId);
+await Migrate(host.Services, username, password, proxyOrProduct, proxyOrProductName, oauthConfigName, backendAppId, environment, keyVaultName);
 
 await host.RunAsync();
 
 #endregion
 
-async Task Migrate(IServiceProvider hostProvider, string username, string password, string proxyOrProduct, string proxyOrProductName, string oauthConfigName, string backendAppId)
+async Task Migrate(IServiceProvider hostProvider, string username, string password, string proxyOrProduct, string proxyOrProductName,
+    string oauthConfigName, string backendAppId, string environment, string keyVaultName)
 {
     if (string.IsNullOrEmpty(proxyOrProduct) || (!proxyOrProduct.ToLower().Equals("product") && !proxyOrProduct.ToLower().Equals("proxy")))
         throw new Exception("only supported values are Product and Proxy");
@@ -196,20 +206,21 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
         var apimApiProduct = await azureApimProvider.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimName);
         foreach (var proxy in apigeeProduct.Proxies)
         {
-            await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenantId);
+            await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
             await azureApimProvider.AddApiToProduct(proxy);
         }
         Console.WriteLine($"API product {proxyOrProductName} and all API proxies belonging to this product are successfully migrated to Azure APIM!");
     }
     else
     {
-        await MigrateApiProxy(hostProvider, bearerToken, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenantId);
+        await MigrateApiProxy(hostProvider, bearerToken, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
         Console.WriteLine($"API proxy {proxyOrProductName} is successfully migrated to Azure APIM!");
     }
     Environment.Exit(0);
 }
 
-async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, string proxyOrProductName, string oauthConfigName, string backendAppId, string azureAdTenentId)
+async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, string proxyOrProductName, string oauthConfigName,
+    string backendAppId, string azureAdTenentId, string environment, string keyVaultName)
 {
     using IServiceScope serviceScope = hostProvider.CreateScope();
     IServiceProvider provider = serviceScope.ServiceProvider;
@@ -225,7 +236,8 @@ async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, st
     string bundlePath = await _apigeeManagementApiService.DownloadApiProxyBundle(proxyOrProductName, maxRevision, bearerToken);
     // import the proxy into Azure APO,
     Console.WriteLine($"Migrating API proxy {proxyOrProductName} to Azure APIM");
-    await _azureApimService.ImportApi(apimName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName);
+    await _azureApimService.ImportApi(apimName, apimUrl, apimResourceGroupName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName, 
+        backendAppId, azureAdTenentId, environment, keyVaultName);
 }
 
 

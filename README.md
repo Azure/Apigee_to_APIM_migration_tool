@@ -24,9 +24,11 @@ Order| Parameter Name |	Description|
 12	| APIM URL| URL of the target Azure APIM instance
 13 |	APIM Name |	Name of the target Azure APIM instance
 14 |	Resource Group Name |	Name of the Resource Group that Azure APIM is deployed in
-15 |	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional parameter)</code>
-16 | Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional parameter)</code>
-17 | Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional parameter)</code>
+15 |	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional parameter, provide empty string if not used)</code>
+16 | Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional parameter, provide empty string if not used)</code>
+17 | Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional parameter, provide empty string if not used)</code>
+18 |	Apigee environment Name |	Name of the Apigee environment the proxy is being migrated from
+19 |	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional parameter, don't provide if not used)</code>
 
 ## Entity Mapping
 
@@ -51,6 +53,8 @@ Proxy endpoint pre-flow and post-flow policies |	API level inbound and outbound 
 Target endpoint pre-flow and post-flow policies |	API level inbound and outbound policies
 Shared Flows | 	Policy Fragments
 API Product | API Product
+Unencrypted Key Value Maps | Named Values
+Encrypted Key Value Maps | Named Values marked as secret (can point to a secret in an Azure Key Vault instance)
 
 ## Policy Mapping
 

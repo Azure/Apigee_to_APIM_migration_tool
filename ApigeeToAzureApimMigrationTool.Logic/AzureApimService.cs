@@ -24,6 +24,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
         public async Task ImportApi(string apimName, string bundlePath, string proxyName, string bearerToken, string oauthConfigName)
         {
+            _apigeeAuthToken = brearToken;
+            _apigeeEnvironmentName = environment;
+            _azureKeyVaultName = keyVaultName;
+            _apigeeProxyName = proxyName;
+
             var apiProxyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", $"{proxyName}.xml"));
             var apiProxyElement = apiProxyXml.Element("APIProxy");
             string apiName = apiProxyElement.Attribute("name").Value;
@@ -31,6 +36,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string basePath = apiProxyElement.Element("Basepaths").Value;
             string displayName = apiProxyElement.Element("DisplayName").Value;
             string description = apiProxyElement.Element("Description").Value;
+
 
             var targetEndpointElements = apiProxyElement.Element("TargetEndpoints").Elements("TargetEndpoint");
             var proxyEndpointElements = apiProxyElement.Element("ProxyEndpoints").Elements("ProxyEndpoint");
@@ -64,7 +70,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 var apiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpoint.Value}.xml"));
 
                 //get pre-flow request policies
-                foreach (var element in apiProxyEndpointXml.Root.Element("PreFlow").Element("Request").Elements("Step"))
+                foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -78,7 +84,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get post-flow request policies
-                foreach (var element in apiProxyEndpointXml.Root.Element("PostFlow").Element("Request").Elements("Step"))
+                foreach (var element in apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -91,7 +97,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get pre-flow response policies
-                foreach (var element in apiProxyEndpointXml.Root.Element("PreFlow").Element("Response").Elements("Step"))
+                foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -105,7 +111,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get post-flow response policies
-                foreach (var element in apiProxyEndpointXml.Root.Element("PostFlow").Element("Response").Elements("Step"))
+                foreach (var element in apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -123,7 +129,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 var targetEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "targets", $"{targetEndpoint.Value}.xml"));
 
                 //get pre-flow request policies
-                foreach (var element in targetEndpointXml.Root.Element("PreFlow").Element("Request").Elements("Step"))
+                foreach (var element in targetEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -137,7 +143,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get post-flow request policies
-                foreach (var element in targetEndpointXml.Root.Element("PostFlow").Element("Request").Elements("Step"))
+                foreach (var element in targetEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -150,7 +156,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get pre-flow response policies
-                foreach (var element in targetEndpointXml.Root.Element("PreFlow").Element("Response").Elements("Step"))
+                foreach (var element in targetEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -164,7 +170,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
 
                 //get post-flow response policies
-                foreach (var element in targetEndpointXml.Root.Element("PostFlow").Element("Response").Elements("Step"))
+                foreach (var element in targetEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step"))
                 {
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -208,7 +214,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                         }
 
                         //get flow response policies
-                        foreach (var element in apiProxyEndpointXml.Root.Element("PreFlow").Element("Response").Elements("Step"))
+                        foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
                         {
                             string policyName = element.Element("Name").Value;
                             string operationCondition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
@@ -308,27 +314,40 @@ namespace ApigeeToAzureApimMigrationTool.Service
             switch (apigeePolicyName)
             {
                 case "AssignMessage":
-                    bool removePolicy = element.Elements().Any(x => x.Name.ToString() == "Remove");
-                    bool setPolicy = element.Elements().Any(x => x.Name.ToString() == "Set");
 
-                    string parentElementName;
-                    if (setPolicy)
-                        parentElementName = "Set";
-                    else
-                        parentElementName = removePolicy ? "Remove" : "Add";
-
-                    if (element.Element(parentElementName).Element("Headers") != null)
+                    if (element.Element("Add")?.Element("Headers") != null)
                     {
-                        foreach (var header in element.Element(parentElementName).Element("Headers").Elements("Header"))
+                        foreach (var header in element.Element("Add").Element("Headers").Elements("Header"))
                         {
-                            apimPolicyElement.Add(SetHeader(header, removePolicy, condition));
+                            apimPolicyElement.Add(SetHeader(header, false, condition));
+                        }
+                    }
+
+                    if (element.Element("Set")?.Element("Headers") != null)
+                    {
+                        foreach (var header in element.Element("Set").Element("Headers").Elements("Header"))
+                        {
+                            apimPolicyElement.Add(SetHeader(header, false, condition));
                         }
                     }
 
 
-                    if (element.Element(parentElementName).Element("Payload") != null)
+                    if (element.Element("Remove")?.Element("Headers") != null)
                     {
-                        apimPolicyElement.Add(SetBody(element.Element(parentElementName).Element("Payload"), condition));
+                        foreach (var header in element.Element("Remove").Element("Headers").Elements("Header"))
+                        {
+                            apimPolicyElement.Add(SetHeader(header, true, condition));
+                        }
+                    }
+
+                    if (element.Element("Add")?.Element("Payload") != null)
+                    {
+                        apimPolicyElement.Add(SetBody(element.Element("Add").Element("Payload"), condition));
+                    }
+
+                    if (element.Element("Set")?.Element("Payload") != null)
+                    {
+                        apimPolicyElement.Add(SetBody(element.Element("Set").Element("Payload"), condition));
                     }
 
                     break;
@@ -336,7 +355,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     apimPolicyElement.Add(CacheLookupValue(element, apigeePolicyDisplayName, condition));
                     break;
                 case "KeyValueMapOperations":
-                    apimPolicyElement.Add(SetVariable(element, apigeePolicyDisplayName, condition));
+                    foreach (var setVariableElement in await SetVariable(element, _apigeeProxyName, apimName, apimResourceGroupName, apigeePolicyDisplayName, condition))
+                        apimPolicyElement.Add(setVariableElement);
                     break;
                 case "VerifyJWT":
                     apimPolicyElement.Add(ValidateJwt(element, condition));
@@ -434,19 +454,40 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
             return ApplyConditionToPolicy(condition, newPolicy);
         }
-        private XElement SetVariable(XElement element, string policyName, string condition = null)
+        private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string resourceGroupName, string policyName, string condition = null)
         {
+            XDocument setVariablePolicies = new XDocument();
+            setVariablePolicies.Add(new XElement("Root"));
             var mapIdentifier = element.Attribute("mapIdentifier").Value;
-            var variableName = element.Element("Get").Attribute("assignTo").Value;
-            var index = element.Element("Get").Attribute("index").Value;
-            var key = element.Element("Get").Element("Key").Element("Parameter").Value;
 
-            string namedValueName = $"{mapIdentifier}-{key}-{index}";
-            namedValueName = namedValueName.Replace("_", "-");
+            var getElements = element.Elements("Get");
+            if (getElements != null)
+                foreach (var getElement in getElements)
+                {
+                    var index = getElement.Attribute("index").Value;
+                    var key = getElement.Element("Key").Element("Parameter").Value;
+                    var variableName = getElement.Attribute("assignTo").Value;
 
-            var newPolicy = new XElement("set-variable", new XAttribute("name", variableName), new XAttribute("value", "{{" + namedValueName + "}}"));
-            _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
-            return ApplyConditionToPolicy(condition, newPolicy);
+
+                    var apigeeKeyValueMap = await _apiService.GetKeyValueMapByName(proxyName, _apigeeEnvironmentName, mapIdentifier, _apigeeAuthToken);
+                    if (apigeeKeyValueMap != null)
+                    {
+                        var keyValueMapEntry = apigeeKeyValueMap.Entry.FirstOrDefault(x => x.Name.Equals(key));
+                        if (keyValueMapEntry == null)
+                            throw new Exception($"Can't find entry {key} under mapIdentifier {mapIdentifier} in Apigee");
+                        await AddNamedValue(resourceGroupName, apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, keyValueMapEntry.Value, _azureKeyVaultName);
+                    }
+
+                    string namedValueName = $"{mapIdentifier}-{key}";
+                    namedValueName = namedValueName.Replace("_", "-");
+
+                    var policy = new XElement("set-variable", new XAttribute("name", variableName), new XAttribute("value", "{{" + namedValueName + "}}"));
+                    _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
+                    policy = ApplyConditionToPolicy(condition, policy);
+                    setVariablePolicies.Root.Add(policy);
+                }
+            return setVariablePolicies.Root.Elements();
+
         }
         private XElement OAuthV2(XElement element, string policyName, string condition = null)
         {
@@ -502,40 +543,80 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var newPolicy = new XElement("include-fragment", new XAttribute("fragment-id", fragmentName));
             return ApplyConditionToPolicy(condition, newPolicy);
         }
-        private XElement SendRequest(XElement element, string apimUrl, string condition = null)
+        private async Task<XElement> SendRequest(XElement element, string apimUrl, string condition = null, string environment = null)
         {
             string requestVariable = element.Element("Request").Attribute("variable").Value;
             string responseVariable = element.Element("Response").Value;
             string continueOnError = element.Attribute("continueOnError").Value;
 
-            var newPolicy = new XElement("send-request", new XAttribute("mode", $"new"), new XAttribute("response-variable-name", responseVariable), new XAttribute("timeout", "60"), new XAttribute("ignore-error", "true"));
+            var newPolicy = new XElement("send-request", new XAttribute("mode", $"new"), new XAttribute("response-variable-name", responseVariable), new XAttribute("timeout", "60"), new XAttribute("ignore-error", $"{continueOnError}"));
 
-            string url = element.Element("LocalTargetConnection") != null ? element.Element("LocalTargetConnection").Element("Path").Value : element.Element("HTTPTargetConnection").Element("URL").Value;
+            string url = string.Empty;
+            string targetServerName = string.Empty;
+
+            if (element.Element("LocalTargetConnection") != null && element.Element("LocalTargetConnection").Element("Path") != null)
+                url = element.Element("LocalTargetConnection").Element("Path").Value;
+            else if (element.Element("HTTPTargetConnection") != null && element.Element("HTTPTargetConnection").Element("URL") != null)
+                url = element.Element("HTTPTargetConnection").Element("URL").Value;
+            else if (element.Element("HTTPTargetConnection") != null && element.Element("HTTPTargetConnection").Element("LoadBalancer") != null
+                && element.Element("HTTPTargetConnection").Element("LoadBalancer").Elements("Server").Any())
+            {
+
+                targetServerName = element.Element("HTTPTargetConnection").Element("LoadBalancer").Elements("Server").First().Attribute("name").Value;
+                if (string.IsNullOrEmpty(environment))
+                    throw new Exception($"service callout policy is using a load balancer as target connection. Environment input parameter must be provided in order to migrate target server {targetServerName}");
+                var targetServerResponse = await _apiService.GetTargetServerByName(targetServerName, environment, _apigeeAuthToken);
+                if (targetServerResponse == null)
+                    throw new Exception($"Can't read Target Server information for {targetServerName} in the {environment} env");
+                string protocol = "http://";
+                string port = string.Empty;
+                if (targetServerResponse.SSLInfo.Enabled)
+                    protocol = "https://";
+                if (!(new int[] { 80, 443 }).Contains(targetServerResponse.Port))
+                    port = $":{targetServerResponse.Port}";
+
+                url = $"{protocol}{targetServerResponse.Host}{port}";
+            }
+
             if (url.StartsWith('/'))
                 url = apimUrl + url;
-            newPolicy.Add(new XElement("set-url", url));
 
-            string verb = element.Element("Request").Element("Set").Element("Verb").Value;
-            newPolicy.Add(new XElement("set-method", verb));
-
-            var headers = element.Element("Request").Element("Set").Element("Headers").Elements("Header");
-            foreach (var header in headers)
-                newPolicy.Add(SetHeader(header, false));
-
-            string PayloadContentType = element.Element("Request").Element("Set").Element("Payload").Attribute("contentType").Value;
-            string PayloadContent = element.Element("Request").Element("Set").Element("Payload").Value;
-            string variablePattern = @"{(.*?)}";
-            foreach (Match match in Regex.Matches(PayloadContent, variablePattern))
+            if (element.Element("Request").Element("Set").Element("Path") != null)
             {
-                if (match.Success && match.Groups.Count > 0)
+                string path = element.Element("Request").Element("Set").Element("Path").Value;
+                if (path.StartsWith("{"))
                 {
-                    PayloadContent = PayloadContent.Replace("{" + match.Groups[1].Value + "}", $"@(context.Variables.GetValueOrDefault(\"{match.Groups[1].Value}\"))");
+                    url = url + "/" + $"@((string)context.Variables[\"{path.Replace("{", "").Replace("}", "")}\"])";
                 }
             }
 
-            var setBody = new XElement("set-body", PayloadContent);
-            setBody.Add(new XAttribute("template", "liquid"));
-            newPolicy.Add(setBody);
+            newPolicy.Add(new XElement("set-url", url));
+
+            string verb = element.Element("Request").Element("Set").Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
+            newPolicy.Add(new XElement("set-method", verb));
+
+            var headers = element.Element("Request").Element("Set")?.Element("Headers")?.Elements("Header");
+            if (headers != null)
+                foreach (var header in headers)
+                    newPolicy.Add(SetHeader(header, false));
+
+            string PayloadContentType = element.Element("Request").Element("Set")?.Element("Payload")?.Attribute("contentType").Value;
+            string PayloadContent = element.Element("Request").Element("Set")?.Element("Payload")?.Value;
+            string variablePattern = @"{(.*?)}";
+            if (!string.IsNullOrEmpty(PayloadContent))
+            {
+                foreach (Match match in Regex.Matches(PayloadContent, variablePattern))
+                {
+                    if (match.Success && match.Groups.Count > 0)
+                    {
+                        PayloadContent = PayloadContent.Replace("{" + match.Groups[1].Value + "}", $"@(context.Variables.GetValueOrDefault(\"{match.Groups[1].Value}\"))");
+                    }
+                }
+
+                var setBody = new XElement("set-body", PayloadContent);
+                setBody.Add(new XAttribute("template", "liquid"));
+                newPolicy.Add(setBody);
+            }
 
             return ApplyConditionToPolicy(condition, newPolicy);
         }
@@ -601,11 +682,25 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     }
                 }
 
-                //foreach (var variable in _policyVariables)
-                //{
-                //    condition = condition.Replace($"{variable.Value} == null", $"!context.Variables.ContainsKey(\"{variable.Value}\")");
-                //    condition = condition.Replace($"{variable.Value} != null", $"context.Variables.ContainsKey(\"{variable.Value}\")");
-                //}
+                string variableEqualsValue = @"[^ ]* (=|==|!=) [^ ]*";
+                foreach (Match match in Regex.Matches(condition, variableEqualsValue))
+                {
+                    if (match.Success && match.Groups.Count > 0)
+                    {
+                        var variableName = match.Groups[0].Value;
+                        var conditionOperator = match.Groups[1].Value;
+                        var variableAndValue = variableName.Replace("(", "").Replace(")", "").Split(conditionOperator.Trim());
+                        if (!variableName.Contains("context") && !string.IsNullOrEmpty(variableName))
+                        {
+                            var variableValue = variableAndValue[1].Trim();
+                            var apimVariableName = variableAndValue[0].Trim();
+                            conditionOperator = conditionOperator.Trim().StartsWith("=") ? "==" : "!=";
+                            condition = condition.Replace(variableName, $"context.Variables.GetValueOrDefault<{GetDataTypeFromStringValue(variableValue)}>(\"{apimVariableName}\") {conditionOperator} {variableValue}");
+                        }
+                    }
+                }
+
+
 
                 condition = WebUtility.HtmlDecode($"@({condition})");
                 var conditionelement = new XElement("choose", new XElement("when", ""));
@@ -655,7 +750,64 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             return XDocument.Parse(rawFragment);
         }
+
+        private async Task AddNamedValue(string resourceGroupName, string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
+        {
+            var subscriptions = _client.GetSubscriptions();
+            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
+            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
+            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
+            ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
+            string namedValueName = $"{mapIdentifier}-{keyName}";
+            var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
+            {
+                DisplayName = namedValueName,
+                Tags = { proxyName, mapIdentifier }
+            };
+            if (isSecret)
+            {
+                namedValueContent.IsSecret = true;
+                {
+                    if (!string.IsNullOrEmpty(keyVaultName))
+                    {
+                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
+                    }
+                    else
+                    {
+                        namedValueContent.Value = "MUST-BE-UPDATED";
+                    }
+                }
+            }
+            else
+                namedValueContent.Value = value;
+
+            await namedValues.CreateOrUpdateAsync(WaitUntil.Completed, namedValueName, namedValueContent);
+        }
+
+        private string GetDataTypeFromStringValue(string str)
+        {
+
+            bool boolValue;
+            Int32 intValue;
+            Int64 bigintValue;
+            double doubleValue;
+            DateTime dateValue;
+
+            if (bool.TryParse(str, out boolValue))
+                return "bool";
+            else if (Int32.TryParse(str, out intValue))
+                return "int";
+            else if (Int64.TryParse(str, out bigintValue))
+                return "Int64";
+            else if (double.TryParse(str, out doubleValue))
+                return "double";
+            else if (DateTime.TryParse(str, out dateValue))
+                return "DateTime";
+            else return "string";
+
+        }
+
         #endregion
     }
 }
-

@@ -14,5 +14,7 @@ namespace ApigeeToAzureApimMigrationTool.Core
         Task<string> GetAuthenticationToken(string username, string password, string authenticationBaseUrl);
 
         Task<ApiProductMetaData> GetApiProductByName(string productName, string bearerToken);
+        Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken);
+        Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken);
     }
 }

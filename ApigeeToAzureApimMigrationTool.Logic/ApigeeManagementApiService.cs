@@ -72,6 +72,15 @@ namespace ApigeeToAzureApimMigrationTool.Service
             return apiMetaData;
         }
 
+        public async Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken)
+        {
+            ResetHttpClient(bearerToken);
+            HttpResponseMessage apiProxyResponse = await _client.GetAsync($"environments/{environment}/targetservers/{targetServerName}");
+            apiProxyResponse.EnsureSuccessStatusCode();
+            var apiMetaData = JsonConvert.DeserializeObject<ApigeeTargetServerModel>(await apiProxyResponse.Content.ReadAsStringAsync());
+            return apiMetaData;
+        }
+
         public async Task<ApiProductMetaData> GetApiProductByName(string productName, string bearerToken)
         {
             ResetHttpClient(bearerToken);
@@ -79,6 +88,27 @@ namespace ApigeeToAzureApimMigrationTool.Service
             apiProxyResponse.EnsureSuccessStatusCode();
             var apiMetaData = JsonConvert.DeserializeObject<ApiProductMetaData>(await apiProxyResponse.Content.ReadAsStringAsync());
             return apiMetaData;
+        }
+
+        public async Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
+        {
+            ResetHttpClient(bearerToken);
+
+            KeyValueMapModel result = null;
+
+            HttpResponseMessage proxyKvmResponse = await _client.GetAsync($"apis/{proxyName}/keyvaluemaps/{mapIdentifier}");
+            if (proxyKvmResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                result = JsonConvert.DeserializeObject<KeyValueMapModel>(await proxyKvmResponse.Content.ReadAsStringAsync());
+
+            HttpResponseMessage environmentKvmResponse = await _client.GetAsync($"environments/{environment}/keyvaluemaps/{mapIdentifier}");
+            if (environmentKvmResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                result = JsonConvert.DeserializeObject<KeyValueMapModel>(await environmentKvmResponse.Content.ReadAsStringAsync());
+
+            HttpResponseMessage organizationKvmResponse = await _client.GetAsync($"keyvaluemaps/{mapIdentifier}");
+            if (organizationKvmResponse.StatusCode == System.Net.HttpStatusCode.OK)
+                result = JsonConvert.DeserializeObject<KeyValueMapModel>(await organizationKvmResponse.Content.ReadAsStringAsync());
+
+            return result;
         }
 
         public async Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
