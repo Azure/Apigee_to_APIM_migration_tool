@@ -197,7 +197,7 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
         foreach (var proxy in apigeeProduct.Proxies)
         {
             await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenantId);
-            await azureApimService.AddApiToProduct(apimApiProduct, proxy);
+            await azureApimProvider.AddApiToProduct(proxy);
         }
         Console.WriteLine($"API product {proxyOrProductName} and all API proxies belonging to this product are successfully migrated to Azure APIM!");
     }

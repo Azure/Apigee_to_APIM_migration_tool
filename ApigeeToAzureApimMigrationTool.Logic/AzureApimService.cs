@@ -1,39 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using ApigeeToAzureApimMigrationTool.Core;
+﻿using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using Azure;
-using Azure.Identity;
-using Azure.ResourceManager;
-using Azure.ResourceManager.ApiManagement;
-using Azure.ResourceManager.ApiManagement.Models;
-using Azure.ResourceManager.Resources;
-using System;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Reflection;
-using System.Xml.Linq;
-using System.Xml;
 using Newtonsoft.Json.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text.RegularExpressions;
-using System.Linq.Expressions;
-using System.Linq.Dynamic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Azure.Core;
-using System.Net.Http.Json;
 using System.Net;
-using static Azure.Core.HttpHeader;
-using static System.Formats.Asn1.AsnWriter;
-using static System.Net.WebRequestMethods;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.ComponentModel.DataAnnotations;
-using System.Linq.Dynamic.Core.Tokenizer;
-using System.Security.Policy;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -80,8 +51,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             var rawApiLevelPolicyXml = RawPolicyXml();
 
-            var apiResourceOperations = apiResource.GetApiOperations();
-            var apiPolicies = apiResource.GetApiPolicies();
+            //var apiResourceOperations = apiResource.GetApiOperations();
+            //var apiPolicies = apiResource.GetApiPolicies();
 
             string[] httpVerbs = { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
 
@@ -206,13 +177,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 }
             }
 
-            var policyParameters = new PolicyContractData
-            {
-                Value = WebUtility.HtmlDecode(rawApiLevelPolicyXml.ToString()),
-                Format = PolicyContentFormat.RawXml
-            };
-
-            await apiPolicies.CreateOrUpdateAsync(Azure.WaitUntil.Completed, $"policy", policyParameters);
+            await _apimProvider.CreatePolicy(rawApiLevelPolicyXml);
             #endregion
 
             #region API Operations and policies
@@ -255,8 +220,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
                             await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("outbound"), apimName, operationCondition, policyName, bearerToken);
                         }
 
-                        string OperationName = flow.Attribute("name").Value;
-                        string OperationDescription = flow.Element("Description").Value;
+                        string operationName = flow.Attribute("name").Value;
+                        string operationDescription = flow.Element("Description").Value;
                         string operationBasePath = apiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
                         string condition = flow.Element("Condition").Value;
                         var successCodesElement = apiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("Properties").Elements("Property").FirstOrDefault(x => x.Attribute("name").Value == "success.codes");
@@ -292,22 +257,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                         var filteredVerbs = httpVerbs.Execute<IEnumerable<string>>(verbFilter);
                         foreach (var httpVerb in filteredVerbs)
                         {
-                            string apimOperationName = $"{OperationName.Replace(" ", "_").Trim()}_{httpVerb}";
-                            var apimOperationResource = await apiResourceOperations.CreateOrUpdateAsync(WaitUntil.Completed, apimOperationName, new ApiOperationData
-                            {
-                                DisplayName = OperationName,
-                                Description = OperationDescription,
-                                Method = httpVerb,
-                                UriTemplate = string.IsNullOrEmpty(proxyPath) ? "/" : proxyPath
-                            });
-
-                            var operationPolicyParameters = new PolicyContractData
-                            {
-                                Value = rawOperationLevelPolicyXml.ToString(),
-                                Format = PolicyContentFormat.RawXml
-                            };
-
-                            await apimOperationResource.Value.GetApiOperationPolicies().CreateOrUpdateAsync(WaitUntil.Completed, $"policy", operationPolicyParameters);
+                            await _apimProvider.CreateOrUpdateOperationPolicy(rawOperationLevelPolicyXml, operationName, operationDescription, httpVerb, proxyPath);
                         }
                     }
                 }
@@ -315,25 +265,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 {
                     foreach (var verb in httpVerbs)
                     {
-                        string apiOperationName = $"{apiName}_{verb}";
-                        await apiResourceOperations.CreateOrUpdateAsync(WaitUntil.Completed, apiOperationName, new ApiOperationData
-                        {
-                            DisplayName = apiOperationName,
-                            Description = description,
-                            Method = verb,
-                            UriTemplate = "/"
-                        });
+                        await _apimProvider.CreateOrUpdateOperation(apiName, description, verb);
                     }
                 }
             }
             #endregion
 
-        }
-
-
-        public async Task AddApiToProduct(ApiManagementProductResource apiProductResource, string apiId)
-        {
-            await apiProductResource.CreateOrUpdateProductApiAsync(apiId);
         }
 
         #region Private Methods

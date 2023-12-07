@@ -13,6 +13,8 @@ using System.Net.Http.Json;
 using Azure.Core;
 using Azure.Identity;
 using Azure;
+using System.Xml.Linq;
+using System.Net;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -26,6 +28,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly string _clientSecret;
         private readonly string _resourceGroupName;
         private readonly string _subscriptionId;
+
+        private ApiResource _apiResource;
+        private ApiPolicyCollection _apiPolicies;
+        private ApiManagementProductResource _productResource;
+        private ApiOperationCollection _apiOperations;
 
         public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimUrl)
         {
@@ -82,9 +89,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
                 var importedApi = await apiCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, apiName.Trim().Replace(" ", ""), api);
 
-                ApiResource apiResource = _client.GetApiResource(importedApi.Value.Id);
+                _apiResource = _client.GetApiResource(importedApi.Value.Id);
 
-                return apiResource;
+                return _apiResource;
 
             }
             catch (Exception)
@@ -108,9 +115,76 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 State = ApiManagementProductState.Published
             });
 
-            ApiManagementProductResource apiProductResource = _client.GetApiManagementProductResource(apiProduct.Value.Id);
+            _productResource = _client.GetApiManagementProductResource(apiProduct.Value.Id);
 
-            return apiProductResource;
+            return _productResource;
+        }
+
+        public async Task AddApiToProduct(string apiId)
+        {
+            await _productResource.CreateOrUpdateProductApiAsync(apiId);
+        }
+
+        public async Task CreateOrUpdateOperation(string apiName, string description, string httpVerb)
+        {
+            if (_apiOperations == null)
+            {
+                _apiOperations = _apiResource.GetApiOperations();
+            }
+
+            string apiOperationName = $"{apiName}_{httpVerb}";
+            await _apiOperations.CreateOrUpdateAsync(WaitUntil.Completed, apiOperationName, new ApiOperationData
+            {
+                DisplayName = apiOperationName,
+                Description = description,
+                Method = httpVerb,
+                UriTemplate = "/"
+            });
+
+        }
+
+        public async Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath)
+        {
+            if (_apiOperations == null)
+            {
+                _apiOperations = _apiResource.GetApiOperations();
+            }
+
+            string apimOperationName = $"{operationName.Replace(" ", "_").Trim()}_{httpVerb}";
+            var apimOperationResource = await _apiOperations.CreateOrUpdateAsync(WaitUntil.Completed, apimOperationName, new ApiOperationData
+            {
+                DisplayName = operationName,
+                Description = operationDescription,
+                Method = httpVerb,
+                UriTemplate = string.IsNullOrEmpty(proxyPath) ? "/" : proxyPath
+            });
+
+            var operationPolicyParameters = new PolicyContractData
+            {
+                Value = operationPolicyXml.ToString(),
+                Format = PolicyContentFormat.RawXml
+            };
+
+            await apimOperationResource.Value.GetApiOperationPolicies().CreateOrUpdateAsync(WaitUntil.Completed, $"policy", operationPolicyParameters);
+
+        }
+
+        public async Task CreatePolicy(XDocument? policyXml)
+        {
+            if (policyXml == null)
+            {
+                throw new ArgumentNullException(nameof(policyXml));
+            }
+
+            var policyParameters = new PolicyContractData
+            {
+                Value = WebUtility.HtmlDecode(policyXml.ToString()),
+                Format = PolicyContentFormat.RawXml
+            };
+
+            _apiPolicies = _apiResource.GetApiPolicies();
+            await _apiPolicies.CreateOrUpdateAsync(Azure.WaitUntil.Completed, $"policy", policyParameters);
+
         }
 
 
