@@ -51,7 +51,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
             throw new NotImplementedException();
         }
 
+        public Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName, string bearerToken)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken)
         {
             throw new NotImplementedException();
         }
