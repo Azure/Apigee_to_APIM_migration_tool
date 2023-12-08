@@ -20,7 +20,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
 {
     public class AzureApimProvider : IApimProvider
     {
-        private readonly ArmClient _client;
         private readonly string _apiUrl;
         private readonly HttpClient _httpClient;
         private readonly string _tenantId;
@@ -29,33 +28,48 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly string _resourceGroupName;
         private readonly string _subscriptionId;
 
-        private ApiResource _apiResource;
-        private ApiPolicyCollection _apiPolicies;
-        private ApiManagementProductResource _productResource;
-        private ApiOperationCollection _apiOperations;
+        private ArmClient? _client;
+        private ResourceGroupResource? _resourceGroup;
+
+        private ApiResource? _apiResource;
+        private ApiPolicyCollection? _apiPolicies;
+        private ApiManagementProductResource? _productResource;
+        private ApiOperationCollection? _apiOperations;
 
         public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimUrl)
         {
-            _client = new ArmClient(new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret));
             _subscriptionId = subscriptionId;
             _tenantId = tenantId;
             _clientId = clientId;
             _clientSecret = clientSecret;
             _resourceGroupName = resourceGroupName;
             _apiUrl = apimUrl;
+
+            // TODO: instantiate properly... but does it matter in a console app?
             _httpClient = new HttpClient();
+        }
+
+        private async Task InitializeArmClient()
+        {
+            _client = new ArmClient(new Azure.Identity.ClientSecretCredential(_tenantId, _clientId, _clientSecret));
+
+            var subscriptions = _client.GetSubscriptions();
+            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
+            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
+            _resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
         }
 
         public async Task<ApiResource> CreateApi(string apiName, string apiDisplayName, string apiDescription, string apimName,
             string revision, string apiPath, string backendUrl, string? oauthConfigurationName = null)
         {
+            if (_resourceGroup == null)
+            {
+                await InitializeArmClient();
+            }
+
             try
             {
-                var subscriptions = _client.GetSubscriptions();
-                SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-                ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-                ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
-                ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
+                ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
                 ApiCollection apiCollection = apimResource.GetApis();
                 if (!backendUrl.Contains("http"))
                 {
@@ -94,19 +108,20 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 return _apiResource;
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw;
+                throw new Exception($"Unable to create API: {e.Message}", e);
             }
         }
 
         public async Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string apimName)
         {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
+            if (_resourceGroup == null)
+            {
+                await InitializeArmClient();
+            }
+            
+            ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
             ApiManagementProductCollection apiProducts = apimResource.GetApiManagementProducts();
             var apiProduct = await apiProducts.CreateOrUpdateAsync(WaitUntil.Completed, name.Trim().Replace(" ", "_"), new ApiManagementProductData
             {
@@ -122,11 +137,21 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         public async Task AddApiToProduct(string apiId)
         {
+            if (_productResource == null)
+            {
+                throw new Exception($"Cannot add API {apiId} to product: Product not yet created.");
+            }
+
             await _productResource.CreateOrUpdateProductApiAsync(apiId);
         }
 
         public async Task CreateOrUpdateOperation(string apiName, string description, string httpVerb)
         {
+            if (_apiResource == null)
+            {
+                throw new Exception($"Cannot add operation to API {apiName}: API not yet created.");
+            }
+
             if (_apiOperations == null)
             {
                 _apiOperations = _apiResource.GetApiOperations();
@@ -140,11 +165,16 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 Method = httpVerb,
                 UriTemplate = "/"
             });
-
         }
 
         public async Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath)
         {
+
+            if (_apiResource == null)
+            {
+                throw new Exception($"Cannot add operation policy to API {operationName}: API not yet created.");
+            }
+
             if (_apiOperations == null)
             {
                 _apiOperations = _apiResource.GetApiOperations();
@@ -169,11 +199,16 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         }
 
-        public async Task CreatePolicy(XDocument? policyXml)
+        public async Task CreatePolicy(XDocument policyXml)
         {
-            if (policyXml == null)
+            if (_apiResource == null)
             {
-                throw new ArgumentNullException(nameof(policyXml));
+                throw new Exception($"Cannot create policy for API: API not yet created.");
+            }
+
+            if (_apiPolicies == null)
+            {
+                _apiPolicies = _apiResource.GetApiPolicies();
             }
 
             var policyParameters = new PolicyContractData
@@ -182,7 +217,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 Format = PolicyContentFormat.RawXml
             };
 
-            _apiPolicies = _apiResource.GetApiPolicies();
             await _apiPolicies.CreateOrUpdateAsync(Azure.WaitUntil.Completed, $"policy", policyParameters);
 
         }
@@ -207,17 +241,19 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 throw new Exception($"can't create Policy Fragment. Status code: {response.StatusCode} - {response.Content.ToString()}");
 
             // WHY?
-            Thread.Sleep(5000);
+            //Thread.Sleep(5000);
         }
 
         public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
         {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(_resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
+            if (_resourceGroup == null)
+            {
+                await InitializeArmClient();
+            }
+
+            ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
             ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
+
             string namedValueName = $"{mapIdentifier}-{keyName}";
             var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
             {

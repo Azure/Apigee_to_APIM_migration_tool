@@ -14,7 +14,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
             string revision, string apiPath, string backendUrl, string? oauthConfigurationName);
         Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string apimName);
         Task CreatePolicyFragment(string policyFragmentName, string apimName, string policyFragmentXml, string policyFragmentDescription);
-        Task CreatePolicy(XDocument? policyXml);
+        Task CreatePolicy(XDocument policyXml);
         Task CreateOrUpdateOperation(string apiName, string description, string httpVerb);
         Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath);
         Task AddApiToProduct(string apiId);

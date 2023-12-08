@@ -1,7 +1,5 @@
 ﻿using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
-using Azure;
-using Newtonsoft.Json.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -61,9 +59,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, revision, ApiBasePath, endpointUrl, oauthConfigName);
 
             var rawApiLevelPolicyXml = RawPolicyXml();
-
-            //var apiResourceOperations = apiResource.GetApiOperations();
-            //var apiPolicies = apiResource.GetApiPolicies();
 
             string[] httpVerbs = { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
 
