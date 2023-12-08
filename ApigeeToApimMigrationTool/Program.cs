@@ -144,17 +144,20 @@ HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.AddSingleton<IProxyMetaDataDataAccess>(new ProxyMetaDataDataAccess(connectionString));
 
+builder.Services.AddSingleton<IApigeeXmlLoader, ApigeeXmlFileLoader>();
+
 builder.Services.AddSingleton<IApigeeManagementApiService, ApigeeManagementApiService>(
     serviceProvider => new ApigeeManagementApiService(
-            proxyMetaDataDataAccess: serviceProvider.GetRequiredService<IProxyMetaDataDataAccess>(),
-            organizationName: apigeeOrganizationName,
-            apigeeManagementApiBaseUrl: apigeeManagementApiBaseUrl));
+        proxyMetaDataDataAccess: serviceProvider.GetRequiredService<IProxyMetaDataDataAccess>(),
+        organizationName: apigeeOrganizationName,
+        apigeeManagementApiBaseUrl: apigeeManagementApiBaseUrl));
 
 builder.Services.AddSingleton<IAzureApimService, AzureApimService>(
     serviceProvider => new AzureApimService(
-     apiService: serviceProvider.GetRequiredService<IApigeeManagementApiService>(),
-     apimProvider: serviceProvider.GetRequiredService<IApimProvider>(),
-     apimUrl: apimUrl));
+        apigeeXmlLoader: serviceProvider.GetRequiredService<IApigeeXmlLoader>(),
+        apiService: serviceProvider.GetRequiredService<IApigeeManagementApiService>(),
+        apimProvider: serviceProvider.GetRequiredService<IApimProvider>(),
+        apimUrl: apimUrl));
 
 builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
     serviceProvider => new AzureApimProvider(

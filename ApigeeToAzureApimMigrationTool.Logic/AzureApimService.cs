@@ -10,6 +10,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
     {
         private readonly IApigeeManagementApiService _apiService;
         private readonly IApimProvider _apimProvider;
+        private readonly IApigeeXmlLoader _apigeeXmlLoader;
         private readonly string _apimUrl;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
 
@@ -18,10 +19,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private string _azureKeyVaultName;
         private string _apigeeProxyName;
 
-        public AzureApimService(IApigeeManagementApiService apiService, IApimProvider apimProvider, string apimUrl)
+        public AzureApimService(IApigeeManagementApiService apiService, IApimProvider apimProvider, IApigeeXmlLoader apigeeXmlLoader, string apimUrl)
         {
             _apiService = apiService;
             _apimProvider = apimProvider;
+            _apigeeXmlLoader = apigeeXmlLoader;
+
             _policyVariables = new List<KeyValuePair<string, string>>();
             _apimUrl = apimUrl;
         }
@@ -32,7 +35,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _azureKeyVaultName = keyVaultName;
             _apigeeProxyName = proxyName;
 
-            var apiProxyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", $"{proxyName}.xml"));
+            var apiProxyXml = _apigeeXmlLoader.LoadProxyXml(bundlePath, proxyName);
             var apiProxyElement = apiProxyXml.Element("APIProxy");
             string apiName = apiProxyElement.Attribute("name").Value;
             string revision = apiProxyElement.Attribute("revision").Value;
@@ -48,12 +51,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string endpointUrl = "";
             if (!string.IsNullOrEmpty(apiTargetEndpoint))
             {
-                var apiTargetXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "targets", $"{apiTargetEndpoint}.xml"));
+                var apiTargetXml = _apigeeXmlLoader.LoadTargetXml(bundlePath, apiTargetEndpoint);
                 endpointUrl = !apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Descendants("URL").Any() ?
                     apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("Path").Value : apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("URL").Value;
             }
 
-            var defaultApiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpointElements.First().Value}.xml"));
+            var defaultApiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpointElements.First().Value);
             string ApiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
 
             var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, revision, ApiBasePath, endpointUrl, oauthConfigName);
@@ -67,7 +70,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             #region Api level Policies
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpoint.Value}.xml"));
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpoint.Value);
 
                 //get pre-flow request policies
                 foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
@@ -75,7 +78,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -89,7 +92,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -102,7 +105,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -116,7 +119,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -126,7 +129,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var targetEndpoint in targetEndpointElements)
             {
-                var targetEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "targets", $"{targetEndpoint.Value}.xml"));
+                var targetEndpointXml = _apigeeXmlLoader.LoadTargetXml(bundlePath, targetEndpoint.Value);
 
                 //get pre-flow request policies
                 foreach (var element in targetEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
@@ -134,7 +137,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -148,7 +151,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -161,7 +164,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -175,7 +178,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     string policyName = element.Element("Name").Value;
                     string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
 
@@ -192,7 +195,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpoint.Value}.xml"));
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpoint.Value);
 
                 var flows = apiProxyEndpointXml.Root.Element("Flows");
 
@@ -206,7 +209,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                             string policyName = element.Element("Name").Value;
                             string operationCondition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                            var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                            var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                             var rootElement = policyXml.Root;
                             XElement newPolicy;
 
@@ -219,7 +222,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                             string policyName = element.Element("Name").Value;
                             string operationCondition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
 
-                            var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
+                            var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
                             var rootElement = policyXml.Root;
                             XElement newPolicy;
 
@@ -284,7 +287,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         {
             var rawPolicyFragment = RawPolicyFragmentXml();
 
-            var sharedFlowBundleXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", $"{sharedflowName}.xml"));
+            var sharedFlowBundleXml = _apigeeXmlLoader.LoadSharedFlowBundleXml(sharedFlowBundlePath, sharedflowName); 
             var sharedFlowElement = sharedFlowBundleXml.Element("SharedFlowBundle");
             string sharedFlowName = sharedFlowElement.Attribute("name").Value;
             string displayName = sharedFlowElement.Element("DisplayName").Value;
@@ -294,14 +297,14 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var sharedFlow in sharedFlows)
             {
-                var sharedFlowXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", "sharedflows", $"{sharedFlow.Value}.xml"));
+                var sharedFlowXml = _apigeeXmlLoader.LoadSharedFlowXml(sharedFlowBundlePath, sharedFlow.Value);
                 var sharedFlowRootElement = sharedFlowXml.Element("SharedFlow");
                 var steps = sharedFlowRootElement.Elements("Step");
                 foreach (var step in steps)
                 {
                     var policyName = step.Element("Name").Value;
                     var condition = step.Element("Condition") != null ? step.Element("Condition").Value : "";
-                    var policyXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadSharedFlowPolicyXml(sharedFlowBundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
                     await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, condition, policyName, brearToken);
