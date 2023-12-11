@@ -13,24 +13,32 @@ namespace ApigeeToApimMigrationTool.Test
     {
         public Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(string.Empty);
         }
 
         public Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision, string bearerToken)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(string.Empty);
         }
 
         public Task<ApiProductMetaData> GetApiProductByName(string productName, string bearerToken)
         {
-            throw new NotImplementedException();
+            var apiProduct = new ApiProductMetaData
+            {
+                Name = productName,
+                DisplayName = productName,
+                Description = "test",
+                Proxies = new string[] { "test" }
+            };
+
+            return Task.FromResult(apiProduct);
         }
 
         public Task<ApigeeEntityModel> GetApiProxyByName(string proxyName, string bearerToken)
         {
             var apiProxy = new ApigeeEntityModel
             {
-                name = "test",
+                name = proxyName,
                 revision = new string[] { "1" },
                 metaData = new ApiProxyMetaData
                 {
@@ -57,22 +65,55 @@ namespace ApigeeToApimMigrationTool.Test
 
         public Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
         {
-            throw new NotImplementedException();
+            var keyMap = new KeyValueMapModel
+            {
+                Name = mapIdentifier,
+                Encrypted = false,
+                Entry = new KeyValueMapItemModel[]
+                {
+                    new KeyValueMapItemModel
+                    {
+                        Name = "test",
+                        Value = "test"
+                    }
+                }
+            };
+
+            return Task.FromResult(keyMap);
+
         }
 
         public Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName, string bearerToken)
         {
-            throw new NotImplementedException();
+            var sharedFlow = new ApigeeEntityModel { name = sharedFlowName, revision = new string[] { "1" } };
+            return Task.FromResult(sharedFlow);
         }
 
         public Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken)
         {
-            throw new NotImplementedException();
+            var targetServer = new ApigeeTargetServerModel
+            {
+                Name = targetServerName,
+                Host = "test",
+                Port = 443,
+                IsEnabled = true,
+                SSLInfo = new ApigeeTargetServerSSLInfo
+                {
+                    Ciphers = new string[] { "test" },
+                    ClientAuthEnabled = true,
+                    Enabled = true,
+                    IgnoreValidationError = true,
+                    Protocols = new string[] { "test" },
+                    TrustStore = "test"
+                }
+            };
+
+            return Task.FromResult(targetServer);
         }
 
         public Task PopulateProxyReferenceDatabase(string bearerToken)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }
