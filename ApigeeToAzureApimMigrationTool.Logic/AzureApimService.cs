@@ -283,7 +283,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
 
         #region Private Methods
-        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string apimName, string brearToken)
+        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string apimName, string bearerToken)
         {
             var rawPolicyFragment = RawPolicyFragmentXml();
 
@@ -307,12 +307,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     var policyXml = _apigeeXmlLoader.LoadSharedFlowPolicyXml(sharedFlowBundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, condition, policyName, bearerToken);
                 }
                 await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }
-        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName, string brearToken)
+        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName, string bearerToken)
         {
             switch (apigeePolicyName)
             {
@@ -378,8 +378,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     break;
                 case "FlowCallout":
                     string sharedFlowName = element.Element("SharedFlowBundle").Value;
-                    string sharedFlowBundlePath = await DownloadSharedFlow(sharedFlowName, brearToken);
-                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimName, brearToken);
+                    string sharedFlowBundlePath = await DownloadSharedFlow(sharedFlowName, bearerToken);
+                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimName, bearerToken);
                     apimPolicyElement.Add(IncludeFragment(sharedFlowName, condition));
                     break;
                     //default:

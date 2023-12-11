@@ -7,18 +7,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ApigeeToAzureApimMigrationTool.Service
+namespace ApigeeToApimMigrationTool.Test
 {
-    public class FakeApigeeManagementApiService : IApigeeManagementApiService
+    public class MockApigeeManagementApiService : IApigeeManagementApiService
     {
-        public FakeApigeeManagementApiService(string organizationName)
+        public Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
         {
-            
-        }
-        public async Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
-        {
-            //update with local path
-            return "c:\\blah\\blah";
+            throw new NotImplementedException();
         }
 
         public Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision, string bearerToken)
@@ -31,24 +26,33 @@ namespace ApigeeToAzureApimMigrationTool.Service
             throw new NotImplementedException();
         }
 
-        public async Task<ApigeeEntityModel> GetApiProxyByName(string proxyName, string bearerToken)
+        public Task<ApigeeEntityModel> GetApiProxyByName(string proxyName, string bearerToken)
         {
-            return new ApigeeEntityModel
+            var apiProxy = new ApigeeEntityModel
             {
-                name = "fake proxy",
-                revision = new string[3] { "1", "2", "3" },
-                metaData = new ApiProxyMetaData()
+                name = "test",
+                revision = new string[] { "1" },
+                metaData = new ApiProxyMetaData
+                {
+                    createdAt = 0,
+                    createdBy = "test",
+                    lastModifiedAt = 0,
+                    lastModifiedBy = "test",
+                    subType = "test"
+                },
             };
+
+            return Task.FromResult(apiProxy);
         }
 
-        public async Task<string> GetAuthenticationToken(string oneTimeToken, string authenticationBaseUrl)
+        public Task<string> GetAuthenticationToken(string oneTimeToken, string authenticationBaseUrl)
         {
-            return "faketokenqwertgbxatcssD?FsDFsd";
+            return Task.FromResult(string.Empty);
         }
 
         public Task<string> GetAuthenticationToken(string username, string password, string authenticationBaseUrl)
         {
-            throw new NotImplementedException();
+            return Task.FromResult(string.Empty);
         }
 
         public Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
