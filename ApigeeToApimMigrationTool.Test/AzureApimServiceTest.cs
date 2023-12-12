@@ -29,14 +29,6 @@ namespace ApigeeToApimMigrationTool.Test
         }
 
         [Fact]
-        public async void TestCreateApi()
-        {
-            //var azureCredentials = JsonConvert.DeserializeObject<AzureCredentials>(File.ReadAllText($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}\\credentials.json"));
-            //IAzureApimService apimInstance = new AzureApimService(azureCredentials.Tenant.ToString(), azureCredentials.AppId.ToString(), azureCredentials.Password);
-            //await apimInstance.CreateApi("Test API", "ApigeeToApimMigrationDemo", "ApigeeToApimMigrationDemo", "1", "/v1/test", "http://www.google.com");
-        }
-
-        [Fact]
         public async Task AssignMessagePolicy_InRequestPreFlow_WithSetHeader_SetsApimHeader_InInbound()
         {
             XElement testPolicyElement = XElement.Parse(@"<Request><Step><Name>test-policy</Name></Step></Request>");
@@ -66,6 +58,8 @@ namespace ApigeeToApimMigrationTool.Test
 
             XElement? setHeaderPolicy = policy?.Element("policies")?.Element("inbound")?.Element("set-header");
             Assert.NotNull(setHeaderPolicy);
+            Assert.Equal("test-header", setHeaderPolicy?.Attribute("name")?.Value);
+            Assert.Equal("test-value", setHeaderPolicy?.Element("value")?.Value);
 
         }
 
