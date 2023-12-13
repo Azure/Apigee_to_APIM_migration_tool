@@ -1,81 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using ApigeeToAzureApimMigrationTool.Core;
+﻿using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
-using Azure;
-using Azure.Identity;
-using Azure.ResourceManager;
-using Azure.ResourceManager.ApiManagement;
-using Azure.ResourceManager.ApiManagement.Models;
-using Azure.ResourceManager.Resources;
-using System;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Reflection;
-using System.Xml.Linq;
-using System.Xml;
-using Newtonsoft.Json.Linq;
-using System.Reflection.PortableExecutable;
-using System.Text.RegularExpressions;
-using System.Linq.Expressions;
-using System.Linq.Dynamic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using Azure.Core;
-using System.Net.Http.Json;
+using System.Collections.Generic;
 using System.Net;
-using static Azure.Core.HttpHeader;
-using static System.Formats.Asn1.AsnWriter;
-using static System.Net.WebRequestMethods;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using System.ComponentModel.DataAnnotations;
-using System.Linq.Dynamic.Core.Tokenizer;
-using System.Security.Policy;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
     public class AzureApimService : IAzureApimService
     {
-        private readonly ArmClient _client;
         private readonly IApigeeManagementApiService _apiService;
-        private readonly string _authToken;
+        private readonly IApimProvider _apimProvider;
+        private readonly IApigeeXmlLoader _apigeeXmlLoader;
+        private readonly string _apimUrl;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
-        private readonly string _apiUrl;
-        private readonly HttpClient _httpClient;
-        private readonly string _tenantId;
-        private readonly string _clientId;
-        private readonly string _clientSecret;
-        private readonly string _subscriptionId;
 
         private string _apigeeAuthToken;
         private string _apigeeEnvironmentName;
         private string _azureKeyVaultName;
         private string _apigeeProxyName;
 
-        public AzureApimService(string subscriptionId, string tenantId, string clientId, string clientSecret, IApigeeManagementApiService apiService, string apimUrl)
+        public AzureApimService(IApigeeManagementApiService apiService, IApimProvider apimProvider, IApigeeXmlLoader apigeeXmlLoader, string apimUrl)
         {
-            _client = new ArmClient(new Azure.Identity.ClientSecretCredential(tenantId, clientId, clientSecret));
-            _subscriptionId = subscriptionId;
-            _tenantId = tenantId;
-            _clientId = clientId;
-            _clientSecret = clientSecret;
             _apiService = apiService;
-            _apiUrl = apimUrl;
+            _apimProvider = apimProvider;
+            _apigeeXmlLoader = apigeeXmlLoader;
+
             _policyVariables = new List<KeyValuePair<string, string>>();
-            _httpClient = new HttpClient();
+            _apimUrl = apimUrl;
         }
-        public async Task ImportApi(string apimName, string apimUrl, string resourceGroupName, string bundlePath, string proxyName, string brearToken,
-            string oauthConfigName, string backendAppId, string azureAdTenentId, string environment, string keyVaultName)
+        public async Task ImportApi(string apimName, string bundlePath, string proxyName, string bearerToken, string oauthConfigName, string environment, string keyVaultName)
         {
-            _apigeeAuthToken = brearToken;
+            _apigeeAuthToken = bearerToken;
             _apigeeEnvironmentName = environment;
             _azureKeyVaultName = keyVaultName;
             _apigeeProxyName = proxyName;
 
-            var apiProxyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", $"{proxyName}.xml"));
+            var apiProxyXml = _apigeeXmlLoader.LoadProxyXml(bundlePath, proxyName);
             var apiProxyElement = apiProxyXml.Element("APIProxy");
             string apiName = apiProxyElement.Attribute("name").Value;
             string revision = apiProxyElement.Attribute("revision").Value;
@@ -91,20 +52,22 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string endpointUrl = "";
             if (!string.IsNullOrEmpty(apiTargetEndpoint))
             {
-                var apiTargetXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "targets", $"{apiTargetEndpoint}.xml"));
+                var apiTargetXml = _apigeeXmlLoader.LoadTargetXml(bundlePath, apiTargetEndpoint);
                 endpointUrl = !apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Descendants("URL").Any() ?
                     apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("Path").Value : apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("URL").Value;
             }
 
-            var defaultApiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpointElements.First().Value}.xml"));
-            string ApiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
+            var defaultApiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpointElements.First().Value);
+            string apiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
 
-            var apiResource = await CreateApi(apiName, apimUrl, displayName, description, apimName, resourceGroupName, revision, ApiBasePath, endpointUrl, oauthConfigName);
+            var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, revision, apiBasePath, endpointUrl, oauthConfigName);
 
             var rawApiLevelPolicyXml = RawPolicyXml();
 
-            var apiResourceOperations = apiResource.GetApiOperations();
-            var apiPolicies = apiResource.GetApiPolicies();
+            // We define these explicitly, they should never be null
+            XElement inboundAzureApimPolicySection = rawApiLevelPolicyXml.Element("policies")!.Element("inbound")!;
+            XElement outboundAzureApimPolicySection = rawApiLevelPolicyXml.Element("policies")!.Element("outbound")!;
+
 
             string[] httpVerbs = { "GET", "POST", "PUT", "DELETE", "OPTIONS" };
 
@@ -113,139 +76,61 @@ namespace ApigeeToAzureApimMigrationTool.Service
             #region Api level Policies
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpoint.Value}.xml"));
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpoint.Value);
 
-                //get pre-flow request policies
-                foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-
-                }
-
+                // get pre-flow request policies
+                IEnumerable<XElement>? preFlowRequestSteps = apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step");
+                await TransformPoliciesInCollection(preFlowRequestSteps, inboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
+                
                 //get post-flow request policies
-                foreach (var element in apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-                }
+                IEnumerable<XElement>? postFlowRequestSteps = apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step");
+                await TransformPoliciesInCollection(postFlowRequestSteps, inboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
                 //get pre-flow response policies
-                foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-
-                }
+                IEnumerable<XElement>? preFlowResponseSteps = apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step");
+                await TransformPoliciesInCollection(preFlowResponseSteps, outboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
                 //get post-flow response policies
-                foreach (var element in apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
+                IEnumerable<XElement>? postFlowResponseSteps = apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step");
+                await TransformPoliciesInCollection(postFlowResponseSteps, outboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-                }
             }
 
             foreach (var targetEndpoint in targetEndpointElements)
             {
-                var targetEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "targets", $"{targetEndpoint.Value}.xml"));
+                var targetEndpointXml = _apigeeXmlLoader.LoadTargetXml(bundlePath, targetEndpoint.Value);
 
                 //get pre-flow request policies
-                foreach (var element in targetEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-
-                }
+                IEnumerable<XElement>? targetPreFlowRequestSteps = targetEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step");
+                await TransformPoliciesInCollection(targetPreFlowRequestSteps, inboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
                 //get post-flow request policies
-                foreach (var element in targetEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-                }
+                IEnumerable<XElement>? targetPostFlowRequestSteps = targetEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step");
+                await TransformPoliciesInCollection(targetPostFlowRequestSteps, inboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
                 //get pre-flow response policies
-                foreach (var element in targetEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-
-                }
+                IEnumerable<XElement>? targetPreFlowResponseSteps = targetEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step");
+                await TransformPoliciesInCollection(targetPreFlowResponseSteps, outboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
                 //get post-flow response policies
-                foreach (var element in targetEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step"))
-                {
-                    string policyName = element.Element("Name").Value;
-                    string condition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
+                IEnumerable<XElement>? targetPostFlowResponseSteps = targetEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step");
+                await TransformPoliciesInCollection(targetPostFlowResponseSteps, outboundAzureApimPolicySection, apimName, bundlePath, bearerToken);
 
-                    var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                    var rootElement = policyXml.Root;
-                    XElement newPolicy;
-
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawApiLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, condition, policyName, brearToken);
-                }
             }
 
-
-            var policyParameters = new PolicyContractData
-            {
-                Value = WebUtility.HtmlDecode(rawApiLevelPolicyXml.ToString()),
-                Format = PolicyContentFormat.RawXml
-            };
-
-            await apiPolicies.CreateOrUpdateAsync(Azure.WaitUntil.Completed, $"policy", policyParameters);
+            await _apimProvider.CreatePolicy(rawApiLevelPolicyXml);
             #endregion
 
             #region API Operations and policies
             // create api operations
             var rawOperationLevelPolicyXml = RawPolicyXml();
+            XElement inboundAzureApimOperationPolicySection = rawApiLevelPolicyXml.Element("policies")!.Element("inbound")!;
+            XElement outboundAzureApimOperationPolicySection = rawApiLevelPolicyXml.Element("policies")!.Element("outbound")!;
+
 
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "proxies", $"{proxyEndpoint.Value}.xml"));
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(bundlePath, proxyEndpoint.Value);
 
                 var flows = apiProxyEndpointXml.Root.Element("Flows");
 
@@ -254,33 +139,19 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     foreach (var flow in flows.Elements("Flow"))
                     {
                         //get flow request policies
-                        foreach (var element in flow.Element("Request").Elements("Step"))
-                        {
-                            string policyName = element.Element("Name").Value;
-                            string operationCondition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
-
-                            var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                            var rootElement = policyXml.Root;
-                            XElement newPolicy;
-
-                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("inbound"), apimName, resourceGroupName, operationCondition, policyName, brearToken);
-                        }
+                        IEnumerable<XElement>? flowRequestSteps = flow.Element("Request")?.Elements("Step");
+                        await TransformPoliciesInCollection(flowRequestSteps, inboundAzureApimOperationPolicySection, apimName, bundlePath, bearerToken);
 
                         //get flow response policies
-                        foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
-                        {
-                            string policyName = element.Element("Name").Value;
-                            string operationCondition = element.Element("Condition") != null ? element.Element("Condition").Value : "";
+                        IEnumerable<XElement>? flowResponseSteps = flow.Element("Response")?.Elements("Step");
+                        await TransformPoliciesInCollection(flowResponseSteps, outboundAzureApimOperationPolicySection, apimName, bundlePath, bearerToken);
 
-                            var policyXml = XDocument.Load(Path.Combine(bundlePath, "apiproxy", "policies", $"{policyName}.xml"));
-                            var rootElement = policyXml.Root;
-                            XElement newPolicy;
+                        // Was originally: 
+                        // foreach (var element in apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step"))
+                        // Was this a bug?
 
-                            await TransformPolicy(rootElement, rootElement.Name.ToString(), rawOperationLevelPolicyXml.Element("policies").Element("outbound"), apimName, resourceGroupName, operationCondition, policyName, brearToken);
-                        }
-
-                        string OperationName = flow.Attribute("name").Value;
-                        string OperationDescription = flow.Element("Description").Value;
+                        string operationName = flow.Attribute("name").Value;
+                        string operationDescription = flow.Element("Description").Value;
                         string operationBasePath = apiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
                         string condition = flow.Element("Condition").Value;
                         var successCodesElement = apiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("Properties").Elements("Property").FirstOrDefault(x => x.Attribute("name").Value == "success.codes");
@@ -316,22 +187,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                         var filteredVerbs = httpVerbs.Execute<IEnumerable<string>>(verbFilter);
                         foreach (var httpVerb in filteredVerbs)
                         {
-                            string apimOperationName = $"{OperationName.Replace(" ", "_").Trim()}_{httpVerb}";
-                            var apimOperationResource = await apiResourceOperations.CreateOrUpdateAsync(WaitUntil.Completed, apimOperationName, new ApiOperationData
-                            {
-                                DisplayName = OperationName,
-                                Description = OperationDescription,
-                                Method = httpVerb,
-                                UriTemplate = string.IsNullOrEmpty(proxyPath) ? "/" : proxyPath
-                            });
-
-                            var operationPolicyParameters = new PolicyContractData
-                            {
-                                Value = rawOperationLevelPolicyXml.ToString(),
-                                Format = PolicyContentFormat.RawXml
-                            };
-
-                            await apimOperationResource.Value.GetApiOperationPolicies().CreateOrUpdateAsync(WaitUntil.Completed, $"policy", operationPolicyParameters);
+                            await _apimProvider.CreateOrUpdateOperationPolicy(rawOperationLevelPolicyXml, operationName, operationDescription, httpVerb, proxyPath);
                         }
                     }
                 }
@@ -339,132 +195,63 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 {
                     foreach (var verb in httpVerbs)
                     {
-                        string apiOperationName = $"API_Operation_{verb}";
-                        await apiResourceOperations.CreateOrUpdateAsync(WaitUntil.Completed, apiOperationName, new ApiOperationData
-                        {
-                            DisplayName = apiOperationName,
-                            Description = description,
-                            Method = verb,
-                            UriTemplate = "/"
-                        });
+                        await _apimProvider.CreateOrUpdateOperation(apiName, description, verb);
                     }
                 }
             }
             #endregion
 
-
-        }
-
-        public async Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string resourceGroupName, string apimName)
-        {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-            ApiManagementProductCollection apiProducts = apimResource.GetApiManagementProducts();
-            var apiProduct = await apiProducts.CreateOrUpdateAsync(WaitUntil.Completed, name.Trim().Replace(" ", "_"), new ApiManagementProductData
-            {
-                Description = description,
-                DisplayName = displayName,
-                State = ApiManagementProductState.Published
-            });
-
-            ApiManagementProductResource apiProductResource = _client.GetApiManagementProductResource(apiProduct.Value.Id);
-
-            return apiProductResource;
-        }
-
-        public async Task AddApiToProduct(ApiManagementProductResource apiProductResource, string apiId)
-        {
-            await apiProductResource.CreateOrUpdateProductApiAsync(apiId);
         }
 
         #region Private Methods
-        private async Task CreatePolicyFragment(string policyFragmentName, string apimName, string apimResourceGroupName, string policyFragmentXml, string policyFragmentDescription)
+
+        private async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, string apimName, string bundlePath, string bearerToken)
         {
-            var body = new
+            if (elements == null)
             {
-                properties = new
-                {
-                    value = policyFragmentXml,
-                    description = policyFragmentDescription,
-                    format = "rawxml"
-                }
-            };
-            _httpClient.DefaultRequestHeaders.Clear();
-            var token = await GetAccessToken();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {token}");
-            var response = await _httpClient.PutAsJsonAsync($"https://management.azure.com/subscriptions/{_subscriptionId}/resourceGroups/{apimResourceGroupName}/providers/Microsoft.ApiManagement/service/{apimName}/policyFragments/{policyFragmentName}?api-version=2023-03-01-preview", body);
-            if (!response.IsSuccessStatusCode)
-                throw new Exception($"can't create Policy Fragment. Status code: {response.StatusCode} - {response.Content.ToString()}");
-
-            Thread.Sleep(5000);
-        }
-        private async Task<string> GetAccessToken()
-        {
-            var credentials = new ClientSecretCredential(_tenantId, _clientId, _clientSecret);
-            var result = await credentials.GetTokenAsync(new TokenRequestContext(new[] { "https://management.azure.com/.default" }), CancellationToken.None);
-            return result.Token;
-        }
-        private async Task<ApiResource> CreateApi(string apiName, string apimUrl, string apiDisplayName, string apiDescription, string apimName, string resourceGroupName,
-                string revision, string apiPath, string backendUrl, string oauthConfigurationName = null)
-        {
-            try
-            {
-                var subscriptions = _client.GetSubscriptions();
-                SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-                ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-                ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-                ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-                ApiCollection apiCollection = apimResource.GetApis();
-                if (!backendUrl.Contains("http"))
-                {
-                    backendUrl = apimUrl + backendUrl;
-                }
-                var api = new ApiCreateOrUpdateContent
-                {
-                    ApiRevision = revision,
-                    ApiType = ApiType.Http,
-                    DisplayName = apiDisplayName,
-                    Description = apiDescription,
-                    Path = apiPath,
-                    ServiceUri = new Uri(backendUrl),
-                    IsSubscriptionRequired = false,
-                    IsCurrent = true,
-                    Protocols =
-                    {
-                        ApiOperationInvokableProtocol.Https
-                    }
-                };
-
-                if (!string.IsNullOrEmpty(oauthConfigurationName))
-                {
-                    AuthenticationSettingsContract authenticationSetting = new AuthenticationSettingsContract();
-                    authenticationSetting.OAuth2 = new OAuth2AuthenticationSettingsContract()
-                    {
-                        AuthorizationServerId = oauthConfigurationName
-                    };
-                    api.AuthenticationSettings = authenticationSetting;
-                }
-
-                var importedApi = await apiCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, apiName.Trim().Replace(" ", ""), api);
-
-                ApiResource apiResource = _client.GetApiResource(importedApi.Value.Id);
-
-                return apiResource;
-
+                return;
             }
-            catch (Exception)
+
+            foreach (var element in elements)
             {
-                throw;
+                if (element == null)
+                {
+                    continue;
+                }
+
+                string? policyName = element.Element("Name")?.Value;
+
+                if (policyName == null)
+                {
+                    throw new Exception($"Cannot find Name element in policy xml: {element}");
+                }
+
+                XElement? conditionElement = element.Element("Condition");
+                string? condition = conditionElement?.Value;
+
+                if (condition == null)
+                {
+                    condition = string.Empty;
+                }
+
+                var policyXml = _apigeeXmlLoader.LoadPolicyXml(bundlePath, policyName);
+
+                var rootElement = policyXml.Root;
+                if (rootElement == null)
+                {
+                    throw new Exception($"Cannot find root element in policy xml: {policyXml}");
+                }
+
+                await TransformPolicy(rootElement, rootElement.Name.ToString(), azureApimPolicySection, apimName, condition, policyName, bearerToken);
             }
+
         }
-        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string resourceGroupName, string apimName, string brearToken)
+
+        private async Task ImportSharedFlow(string sharedFlowBundlePath, string sharedflowName, string apimName, string bearerToken)
         {
             var rawPolicyFragment = RawPolicyFragmentXml();
 
-            var sharedFlowBundleXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", $"{sharedflowName}.xml"));
+            var sharedFlowBundleXml = _apigeeXmlLoader.LoadSharedFlowBundleXml(sharedFlowBundlePath, sharedflowName); 
             var sharedFlowElement = sharedFlowBundleXml.Element("SharedFlowBundle");
             string sharedFlowName = sharedFlowElement.Attribute("name").Value;
             string displayName = sharedFlowElement.Element("DisplayName").Value;
@@ -474,22 +261,22 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var sharedFlow in sharedFlows)
             {
-                var sharedFlowXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", "sharedflows", $"{sharedFlow.Value}.xml"));
+                var sharedFlowXml = _apigeeXmlLoader.LoadSharedFlowXml(sharedFlowBundlePath, sharedFlow.Value);
                 var sharedFlowRootElement = sharedFlowXml.Element("SharedFlow");
                 var steps = sharedFlowRootElement.Elements("Step");
                 foreach (var step in steps)
                 {
                     var policyName = step.Element("Name").Value;
                     var condition = step.Element("Condition") != null ? step.Element("Condition").Value : "";
-                    var policyXml = XDocument.Load(Path.Combine(sharedFlowBundlePath, "sharedflowbundle", "policies", $"{policyName}.xml"));
+                    var policyXml = _apigeeXmlLoader.LoadSharedFlowPolicyXml(sharedFlowBundlePath, policyName);
                     var rootElement = policyXml.Root;
                     XElement newPolicy;
-                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, resourceGroupName, condition, policyName, brearToken);
+                    await TransformPolicy(rootElement, rootElement.Name.ToString(), rawPolicyFragment.Root, apimName, condition, policyName, bearerToken);
                 }
-                await CreatePolicyFragment(sharedFlowName, apimName, resourceGroupName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
+                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }
-        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string apimResourceGroupName, string condition, string apigeePolicyDisplayName, string brearToken)
+        private async Task TransformPolicy(XElement? element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName, string bearerToken)
         {
             switch (apigeePolicyName)
             {
@@ -535,14 +322,14 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     apimPolicyElement.Add(CacheLookupValue(element, apigeePolicyDisplayName, condition));
                     break;
                 case "KeyValueMapOperations":
-                    foreach (var setVariableElement in await SetVariable(element, _apigeeProxyName, apimName, apimResourceGroupName, apigeePolicyDisplayName, condition))
+                    foreach (var setVariableElement in await SetVariable(element, _apigeeProxyName, apimName, apigeePolicyDisplayName, condition))
                         apimPolicyElement.Add(setVariableElement);
                     break;
                 case "VerifyJWT":
                     apimPolicyElement.Add(ValidateJwt(element, condition));
                     break;
                 case "ServiceCallout":
-                    apimPolicyElement.Add(await SendRequest(element, _apiUrl, condition, _apigeeEnvironmentName));
+                    apimPolicyElement.Add(SendRequest(element, _apimUrl, condition));
                     break;
                 case "ExtractVariables":
                     apimPolicyElement.Add(ExtractJsonValue(element, apigeePolicyDisplayName, condition));
@@ -555,8 +342,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     break;
                 case "FlowCallout":
                     string sharedFlowName = element.Element("SharedFlowBundle").Value;
-                    string sharedFlowBundlePath = await DownloadSharedFlow(sharedFlowName, brearToken);
-                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimResourceGroupName, apimName, brearToken);
+                    string sharedFlowBundlePath = await DownloadSharedFlow(sharedFlowName, bearerToken);
+                    await ImportSharedFlow(sharedFlowBundlePath, sharedFlowName, apimName, bearerToken);
                     apimPolicyElement.Add(IncludeFragment(sharedFlowName, condition));
                     break;
                     //default:
@@ -634,7 +421,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
             return ApplyConditionToPolicy(condition, newPolicy);
         }
-        private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string resourceGroupName, string policyName, string condition = null)
+        private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string policyName, string condition = null)
         {
             XDocument setVariablePolicies = new XDocument();
             setVariablePolicies.Add(new XElement("Root"));
@@ -655,7 +442,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                         var keyValueMapEntry = apigeeKeyValueMap.Entry.FirstOrDefault(x => x.Name.Equals(key));
                         if (keyValueMapEntry == null)
                             throw new Exception($"Can't find entry {key} under mapIdentifier {mapIdentifier} in Apigee");
-                        await AddNamedValue(resourceGroupName, apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, keyValueMapEntry.Value, _azureKeyVaultName);
+                        await _apimProvider.AddNamedValue(apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, keyValueMapEntry.Value, _azureKeyVaultName);
                     }
 
                     string namedValueName = $"{mapIdentifier}-{key}";
@@ -929,40 +716,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string rawFragment = @"<fragment></fragment>";
 
             return XDocument.Parse(rawFragment);
-        }
-
-        private async Task AddNamedValue(string resourceGroupName, string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
-        {
-            var subscriptions = _client.GetSubscriptions();
-            SubscriptionResource subscription = subscriptions.Get(_subscriptionId);
-            ResourceGroupCollection resourceGroups = subscription.GetResourceGroups();
-            ResourceGroupResource resourceGroup = await resourceGroups.GetAsync(resourceGroupName);
-            ApiManagementServiceResource apimResource = await resourceGroup.GetApiManagementServiceAsync(apimName);
-            ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
-            string namedValueName = $"{mapIdentifier}-{keyName}";
-            var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
-            {
-                DisplayName = namedValueName,
-                Tags = { proxyName, mapIdentifier }
-            };
-            if (isSecret)
-            {
-                namedValueContent.IsSecret = true;
-                {
-                    if (!string.IsNullOrEmpty(keyVaultName))
-                    {
-                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
-                    }
-                    else
-                    {
-                        namedValueContent.Value = "MUST-BE-UPDATED";
-                    }
-                }
-            }
-            else
-                namedValueContent.Value = value;
-
-            await namedValues.CreateOrUpdateAsync(WaitUntil.Completed, namedValueName, namedValueContent);
         }
 
         private string GetDataTypeFromStringValue(string str)

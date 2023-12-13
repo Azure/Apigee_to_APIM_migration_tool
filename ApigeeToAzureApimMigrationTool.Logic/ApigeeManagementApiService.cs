@@ -32,6 +32,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         {
             HttpClient client = new HttpClient();
 
+            // Is this a real token!?
             client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
 
             HttpResponseMessage authTokenResponse = await client.PostAsync($"{authenticationBaseUrl}/oauth/token?grant_type=password&passcode={oneTimeToken}", null);
