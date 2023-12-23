@@ -20,13 +20,16 @@ namespace ApigeeToAzureApimMigrationTool.Service
 {
     public class AzureApimProvider : IApimProvider
     {
-        private readonly string _apiUrl;
+        public string ApimName { get; private set; }
+        public string ApimUrl { get; private set; }
+
         private readonly HttpClient _httpClient;
         private readonly string _tenantId;
         private readonly string _clientId;
         private readonly string _clientSecret;
         private readonly string _resourceGroupName;
         private readonly string _subscriptionId;
+        private readonly string? _keyVaultName;
 
         private ArmClient? _client;
         private ResourceGroupResource? _resourceGroup;
@@ -36,14 +39,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private ApiManagementProductResource? _productResource;
         private ApiOperationCollection? _apiOperations;
 
-        public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimUrl)
+        public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimName, string apimUrl, string keyVaultName)
         {
             _subscriptionId = subscriptionId;
             _tenantId = tenantId;
             _clientId = clientId;
             _clientSecret = clientSecret;
             _resourceGroupName = resourceGroupName;
-            _apiUrl = apimUrl;
+            _keyVaultName = keyVaultName;
+
+            ApimName = apimName;
+            ApimUrl = apimUrl;
 
             // TODO: instantiate properly... but does it matter in a console app?
             _httpClient = new HttpClient();
@@ -73,7 +79,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                 ApiCollection apiCollection = apimResource.GetApis();
                 if (!backendUrl.Contains("http"))
                 {
-                    backendUrl = _apiUrl + backendUrl;
+                    backendUrl = ApimUrl + backendUrl;
                 }
                 var api = new ApiCreateOrUpdateContent
                 {
@@ -244,7 +250,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             //Thread.Sleep(5000);
         }
 
-        public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
+        public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value)
         {
             if (_resourceGroup == null)
             {
@@ -264,9 +270,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
             {
                 namedValueContent.IsSecret = true;
                 {
-                    if (!string.IsNullOrEmpty(keyVaultName))
+                    if (!string.IsNullOrEmpty(_keyVaultName))
                     {
-                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
+                        namedValueContent.KeyVault = new KeyVaultContractCreateProperties { SecretIdentifier = $"https://{_keyVaultName}.vault.azure.net/secrets/{namedValueName}" };
                     }
                     else
                     {

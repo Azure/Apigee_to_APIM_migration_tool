@@ -17,6 +17,7 @@ using System.Drawing.Text;
 using System.Reflection;
 using static System.Net.Mime.MediaTypeNames;
 using System;
+using ApigeeToAzureApimMigrationTool.Service.Transformations;
 
 string apigeeOrganizationName = null, apigeeManagementApiBaseUrl = null, apigeeAuthenticationBaseUrl = null, username = null, password = null, proxyOrProduct, proxyOrProductName, azureAppId, azurePassword, azureTenantId, azureSubscriptionId,
     apimUrl, apimName, apimResourceGroupName, passcode = null, connectionString = null, environment = null, keyVaultName = null;
@@ -150,14 +151,17 @@ builder.Services.AddSingleton<IApigeeManagementApiService, ApigeeManagementApiSe
     serviceProvider => new ApigeeManagementApiService(
         proxyMetaDataDataAccess: serviceProvider.GetRequiredService<IProxyMetaDataDataAccess>(),
         organizationName: apigeeOrganizationName,
-        apigeeManagementApiBaseUrl: apigeeManagementApiBaseUrl));
+        apigeeManagementApiBaseUrl: apigeeManagementApiBaseUrl,
+        proxyName: proxyOrProduct,
+        environmentName: environment,
+        authenticationBaseUrl: apigeeAuthenticationBaseUrl));
 
 builder.Services.AddSingleton<IAzureApimService, AzureApimService>(
     serviceProvider => new AzureApimService(
         apigeeXmlLoader: serviceProvider.GetRequiredService<IApigeeXmlLoader>(),
-        apiService: serviceProvider.GetRequiredService<IApigeeManagementApiService>(),
         apimProvider: serviceProvider.GetRequiredService<IApimProvider>(),
-        apimUrl: apimUrl));
+        policyTransformer: serviceProvider.GetRequiredService<IApimPolicyTransformer>()
+        ));
 
 builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
     serviceProvider => new AzureApimProvider(
@@ -166,7 +170,15 @@ builder.Services.AddSingleton<IApimProvider, AzureApimProvider>(
                 clientId: azureAppId,
                 clientSecret: azurePassword,
                 resourceGroupName: apimResourceGroupName,
-                apimUrl: apimUrl));
+                apimName: apimName,   
+                apimUrl: apimUrl,
+                keyVaultName: keyVaultName));
+
+// TODO: Load with local file bundle provider based on config
+builder.Services.AddSingleton<IBundleProvider, ApigeeOnlineBundleProvider>();
+
+builder.Services.AddSingleton<IPolicyTransformationFactory, PolicyTransformationFactory>();
+builder.Services.AddSingleton<IApimPolicyTransformer, ApigeeToApimPolicyTransformer>();
 
 using IHost host = builder.Build();
 
@@ -190,39 +202,37 @@ async Task Migrate(IServiceProvider hostProvider, string username, string passwo
     var azureApimProvider = provider.GetRequiredService<IApimProvider>();
 
     Console.WriteLine("get the bearer token for Apigee management API ...");
-    string bearerToken;
     if (usePasscode)
     {
-        //get the token using passcode
-        bearerToken = await apigeeManagementApiService.GetAuthenticationToken(passcode, apigeeAuthenticationBaseUrl);
+        apigeeManagementApiService.AuthenticationToken = passcode;
     }
     else
     {
-        //get the token using username and password
-        bearerToken = await apigeeManagementApiService.GetAuthenticationToken(username, password, apigeeAuthenticationBaseUrl);
+        apigeeManagementApiService.Username = username;
+        apigeeManagementApiService.Password = password;
     }
 
     if (proxyOrProduct.ToLower().Equals("product"))
     {
-        var apigeeProduct = await apigeeManagementApiService.GetApiProductByName(proxyOrProductName, bearerToken);
+        var apigeeProduct = await apigeeManagementApiService.GetApiProductByName(proxyOrProductName);
         var apigeeProductName = apigeeProduct.Name.Trim().Replace(" ", "-").ToLower();
         var apimApiProduct = await azureApimProvider.CreateProduct(apigeeProductName, apigeeProduct.DisplayName, apigeeProduct.Description, apimName);
         foreach (var proxy in apigeeProduct.Proxies)
         {
-            await MigrateApiProxy(hostProvider, bearerToken, proxy, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
+            await MigrateApiProxy(hostProvider, proxy, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
             await azureApimProvider.AddApiToProduct(proxy);
         }
         Console.WriteLine($"API product {proxyOrProductName} and all API proxies belonging to this product are successfully migrated to Azure APIM!");
     }
     else
     {
-        await MigrateApiProxy(hostProvider, bearerToken, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
+        await MigrateApiProxy(hostProvider, proxyOrProductName, oauthConfigName, backendAppId, azureAdTenentId, environment, keyVaultName);
         Console.WriteLine($"API proxy {proxyOrProductName} is successfully migrated to Azure APIM!");
     }
     Environment.Exit(0);
 }
 
-async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, string proxyOrProductName, string oauthConfigName,
+async Task MigrateApiProxy(IServiceProvider hostProvider, string proxyOrProductName, string oauthConfigName,
     string backendAppId, string azureAdTenentId, string environment, string keyVaultName)
 {
     using IServiceScope serviceScope = hostProvider.CreateScope();
@@ -230,16 +240,14 @@ async Task MigrateApiProxy(IServiceProvider hostProvider, string bearerToken, st
     var _apigeeManagementApiService = provider.GetRequiredService<IApigeeManagementApiService>();
     var _azureApimService = provider.GetRequiredService<IAzureApimService>();
 
+    var bundleProvider = provider.GetRequiredService<IBundleProvider>();
+
     //get api metadata
+    // TODO - use IBundleProvider ********
     Console.WriteLine("Downloading the proxy api bundle...");
-    var apiProxyMetadata = await _apigeeManagementApiService.GetApiProxyByName(proxyOrProductName, bearerToken);
-    //get the latest revision
-    int maxRevision = apiProxyMetadata.revision.Select(x => int.Parse(x)).Max();
-    //download api proxy bundle 
-    string bundlePath = await _apigeeManagementApiService.DownloadApiProxyBundle(proxyOrProductName, maxRevision, bearerToken);
-    // import the proxy into Azure APO,
+    await bundleProvider.LoadBundle(proxyOrProductName);
     Console.WriteLine($"Migrating API proxy {proxyOrProductName} to Azure APIM");
-    await _azureApimService.ImportApi(apimName, bundlePath, proxyOrProductName, bearerToken, oauthConfigName, environment, keyVaultName);
+    await _azureApimService.ImportApi(apimName, proxyOrProductName, oauthConfigName, environment, keyVaultName);
 }
 
 

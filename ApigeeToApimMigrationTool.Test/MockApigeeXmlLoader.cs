@@ -18,7 +18,7 @@ namespace ApigeeToApimMigrationTool.Test
         public Dictionary<string, XDocument> SharedFlowXml { get; set; } = new Dictionary<string, XDocument>();
         public Dictionary<string, XDocument> TargetXml { get; set; } = new Dictionary<string, XDocument>();
 
-        public XDocument LoadPolicyXml(string path, string policyName)
+        public XDocument LoadPolicyXml(string policyName)
         {
             if (PolicyXml.ContainsKey(policyName))
             {
@@ -30,7 +30,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadProxyEndpointXml(string path, string proxyEndpointName)
+        public XDocument LoadProxyEndpointXml(string proxyEndpointName)
         {
             if (ProxyEndpointXml.ContainsKey(proxyEndpointName))
             {
@@ -42,7 +42,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadProxyXml(string path, string proxyName)
+        public XDocument LoadProxyXml(string proxyName)
         {
             if (ProxyXml.ContainsKey(proxyName))
             {
@@ -54,7 +54,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadSharedFlowBundleXml(string path, string sharedFlowName)
+        public XDocument LoadSharedFlowBundleXml(string sharedFlowName)
         {
             if (SharedFlowBundleXml.ContainsKey(sharedFlowName))
             {
@@ -66,7 +66,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadSharedFlowPolicyXml(string path, string policyName)
+        public XDocument LoadSharedFlowPolicyXml(string policyName)
         {
             if (SharedFlowPolicyXml.ContainsKey(policyName))
             {
@@ -78,7 +78,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadSharedFlowXml(string path, string sharedFlowName)
+        public XDocument LoadSharedFlowXml(string sharedFlowName)
         {
             if (SharedFlowXml.ContainsKey(sharedFlowName))
             {
@@ -90,7 +90,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadTargetXml(string path, string targetEndpointName)
+        public XDocument LoadTargetXml(string targetEndpointName)
         {
             if (TargetXml.ContainsKey(targetEndpointName))
             {

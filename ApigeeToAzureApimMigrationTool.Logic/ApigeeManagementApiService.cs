@@ -14,86 +14,66 @@ namespace ApigeeToAzureApimMigrationTool.Service
     public class ApigeeManagementApiService : IApigeeManagementApiService
     {
         private readonly HttpClient _client;
+        private readonly string _authenticationBaseUrl;
         private readonly IProxyMetaDataDataAccess _proxyMetaDataDataAccess;
-        public ApigeeManagementApiService(string apigeeManagementApiBaseUrl, string organizationName, IProxyMetaDataDataAccess proxyMetaDataDataAccess)
+        public ApigeeManagementApiService(string apigeeManagementApiBaseUrl, string authenticationBaseUrl, string organizationName, string proxyName, string? environmentName, IProxyMetaDataDataAccess proxyMetaDataDataAccess)
         {
             _client = new HttpClient();
             _client.BaseAddress = new Uri($"{apigeeManagementApiBaseUrl}/v1/organizations/{organizationName}/");
+            _authenticationBaseUrl = authenticationBaseUrl;
             _proxyMetaDataDataAccess = proxyMetaDataDataAccess;
+
+            AuthenticationToken = string.Empty;
+            Username = string.Empty;
+            Password = string.Empty;
+
+            ProxyName = proxyName;
+            Environment = environmentName;
         }
 
+        public string AuthenticationToken { get; set;}
+        public string Username { get; set; }
+        public string Password { get; set; }
 
-        /// <summary>
-        /// Get bearer token
-        /// </summary>
-        /// <param name="oneTimeToken">one time token recieved from </param>
-        /// <returns>Bearer token</returns>
-        public async Task<string> GetAuthenticationToken(string oneTimeToken, string authenticationBaseUrl)
-        {
-            HttpClient client = new HttpClient();
+        public string? Environment { get; private set; }
+        public string ProxyName { get; private set; }
 
-            // Is this a real token!?
-            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
-
-            HttpResponseMessage authTokenResponse = await client.PostAsync($"{authenticationBaseUrl}/oauth/token?grant_type=password&passcode={oneTimeToken}", null);
-            authTokenResponse.EnsureSuccessStatusCode();
-            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
-
-            string token = authresponse.access_token;
-
-            return token;
-        }
-
-        public async Task<string> GetAuthenticationToken(string username, string password, string authenticationBaseUrl)
-        {
-            HttpClient client = new HttpClient();
-
-            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
-
-            HttpResponseMessage authTokenResponse = await client.PostAsync($"{authenticationBaseUrl}/oauth/token?grant_type=password&username={username}&password={password}", null);
-            authTokenResponse.EnsureSuccessStatusCode();
-            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
-
-            string token = authresponse.access_token;
-
-            return token;
-        }
         /// <summary>
         /// 
         /// </summary>
         /// <param name="proxyName"></param>
         /// <param name="bearerToken"></param>
         /// <returns></returns>
-        public async Task<ApigeeEntityModel> GetApiProxyByName(string proxyName, string bearerToken)
+        public async Task<ApigeeEntityModel> GetApiProxyByName(string proxyName)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiProxyResponse = await _client.GetAsync($"apis/{proxyName}");
             apiProxyResponse.EnsureSuccessStatusCode();
             var apiMetaData = JsonConvert.DeserializeObject<ApigeeEntityModel>(await apiProxyResponse.Content.ReadAsStringAsync());
             return apiMetaData;
         }
 
-        public async Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken)
+        public async Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiProxyResponse = await _client.GetAsync($"environments/{environment}/targetservers/{targetServerName}");
             apiProxyResponse.EnsureSuccessStatusCode();
             var apiMetaData = JsonConvert.DeserializeObject<ApigeeTargetServerModel>(await apiProxyResponse.Content.ReadAsStringAsync());
             return apiMetaData;
         }
 
-        public async Task<ApiProductMetaData> GetApiProductByName(string productName, string bearerToken)
+        public async Task<ApiProductMetaData> GetApiProductByName(string productName)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiProxyResponse = await _client.GetAsync($"apiproducts/{productName}");
             apiProxyResponse.EnsureSuccessStatusCode();
             var apiMetaData = JsonConvert.DeserializeObject<ApiProductMetaData>(await apiProxyResponse.Content.ReadAsStringAsync());
             return apiMetaData;
         }
 
-        public async Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
+        public async Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
 
             KeyValueMapModel result = null;
 
@@ -112,9 +92,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
             return result;
         }
 
-        public async Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
+        public async Task<string> DownloadApiProxyBundle(string proxyName, int revision)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiRevisionResponse = await _client.GetAsync($"apis/{proxyName}/revisions/{revision}?format=bundle");
 
             Stream inputStream = await apiRevisionResponse.Content.ReadAsStreamAsync();
@@ -131,18 +111,18 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
 
         //TODO: replace with a new model
-        public async Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName, string bearerToken)
+        public async Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiProxyResponse = await _client.GetAsync($"sharedflows/{sharedFlowName}");
             apiProxyResponse.EnsureSuccessStatusCode();
             var apiMetaData = JsonConvert.DeserializeObject<ApigeeEntityModel>(await apiProxyResponse.Content.ReadAsStringAsync());
             return apiMetaData;
         }
 
-        public async Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision, string bearerToken)
+        public async Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision)
         {
-            ResetHttpClient(bearerToken);
+            await ResetHttpClient();
             HttpResponseMessage apiRevisionResponse = await _client.GetAsync($"sharedflows/{sharedFlowName}/revisions/{revision}?format=bundle");
 
             Stream inputStream = await apiRevisionResponse.Content.ReadAsStreamAsync();
@@ -157,11 +137,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
             return sharedFlowPath;
         }
 
-        public async Task PopulateProxyReferenceDatabase(string bearerToken)
+        public async Task PopulateProxyReferenceDatabase()
         {
             if (!await _proxyMetaDataDataAccess.IsProxyMetadataTablePopulted())
             {
-                ResetHttpClient(bearerToken);
+                await ResetHttpClient();
                 HttpResponseMessage proxiListResponse = await _client.GetAsync($"apis/");
                 var proxyNames = JsonConvert.DeserializeObject<string[]>(await proxiListResponse.Content.ReadAsStringAsync());
                 foreach (string proxy in proxyNames)
@@ -187,12 +167,54 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
 
 
-        private void ResetHttpClient(string bearerToken)
+        private async Task ResetHttpClient()
         {
+            string bearerToken = await GetBearerToken();
             _client.DefaultRequestHeaders.Clear();
             _client.DefaultRequestHeaders.Add("Authorization", $"Bearer {bearerToken}");
 
         }
+
+        private async Task<string> GetBearerToken()
+        {
+            if (!string.IsNullOrEmpty(AuthenticationToken))
+                return await GetBearerTokenFromOneTimeAuthToken();
+            else
+                return await GetBearerTokenFromUsernameAndPassword();
+        }
+        private async Task<string> GetBearerTokenFromOneTimeAuthToken()
+        {
+            HttpClient client = new HttpClient();
+
+            // NOT A REAL TOKEN.  THIS IS A DEFAULT TOKEN THAT IS REQUIRED FOR ALL CLIENTS BY THE API
+            // See: https://docs.apigee.com/api-platform/system-administration/management-api-tokens#request-headers
+            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
+
+            HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&passcode={AuthenticationToken}", null);
+            authTokenResponse.EnsureSuccessStatusCode();
+            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
+
+            string token = authresponse.access_token;
+
+            return token;
+        }
+
+        private async Task<string> GetBearerTokenFromUsernameAndPassword()
+        {
+            HttpClient client = new HttpClient();
+
+            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
+
+            HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&username={Username}&password={Password}", null);
+            authTokenResponse.EnsureSuccessStatusCode();
+            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
+
+            string token = authresponse.access_token;
+
+            return token;
+        }
+
+
 
     }
 }

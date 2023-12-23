@@ -12,6 +12,8 @@ namespace ApigeeToApimMigrationTool.Test
 {
     public class MockApimProvider : IApimProvider
     {
+        public string ApimName { get; set; }
+        public string ApimUrl { get; set; }
         public XDocument PolicyXml { get; private set; } = new XDocument();
 
         public Task AddApiToProduct(string apiId)
@@ -19,7 +21,7 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.CompletedTask;
         }
 
-        public Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName)
+        public Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value)
         {
             return Task.CompletedTask;
         }
