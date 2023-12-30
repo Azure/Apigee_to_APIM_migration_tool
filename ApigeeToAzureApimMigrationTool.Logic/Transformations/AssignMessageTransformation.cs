@@ -40,6 +40,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 }
             }
 
+            // BUG?: Add doesn't support the Payload child element.  Only Set does.
             if (apigeePolicyElement.Element("Add")?.Element("Payload") != null)
             {
                 apimPolicies.Add(SetBody(apigeePolicyElement.Element("Add").Element("Payload")));
@@ -59,6 +60,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             var contentType = body.Attribute("contentType")?.Value;
             var value = body.Value;
             var newPolicy = new XElement("set-body");
+            // TODO: Variable substitution can also be used in json payloads.
             if (!contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase))
             {
                 if (value.StartsWith('{'))
@@ -86,6 +88,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 value = expressionTranslator.Translate(value);
                 value = WebUtility.HtmlDecode($"@({value})");
             }
+            // BUG?: Per Apigee documentation, the Add element should not overwrite existing headers, and exists-action should
+            // therefore be set to "skip".  Only Set should be set to "override."
             var newPolicy = new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", remove ? "delete" : "override"));
             if (!remove)
                 newPolicy.Add(new XElement("value", value));
