@@ -51,6 +51,11 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 apimPolicies.Add(SetBody(apigeePolicyElement.Element("Set").Element("Payload")));
             }
 
+            if (apigeePolicyElement.Element("AssignVariable") != null)
+            {
+                apimPolicies.Add(SetVariable(apigeePolicyElement));
+            }
+
             return Task.FromResult(apimPolicies.AsEnumerable());
 
         }
@@ -93,6 +98,15 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             var newPolicy = new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", remove ? "delete" : "override"));
             if (!remove)
                 newPolicy.Add(new XElement("value", value));
+            return newPolicy;
+        }
+
+        private XElement SetVariable(XElement assignMessageElement)
+        {
+            var assignVariable = assignMessageElement.Element("AssignVariable");
+            var name = assignVariable.Element("Name")?.Value;
+            var value = assignVariable.Element("Value")?.Value;
+            var newPolicy = new XElement("set-variable", new XAttribute("name", name), new XAttribute("value", value));
             return newPolicy;
         }
 

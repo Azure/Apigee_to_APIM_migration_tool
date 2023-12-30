@@ -117,5 +117,31 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
             Assert.Equal("set-body", result.First().Name.LocalName);
             Assert.Equal("{\"key\":\"value\"}", result.First().Value);
         }
+
+        [Fact]
+        public async Task Transform_AssignVariable_SetsVariable()
+        {
+            // Arrange
+            var apigeePolicyElement = XElement.Parse(
+              @"<AssignMessage continueOnError=""false"" enabled=""true"" name=""Assign-Variable-1"">
+                    <AssignVariable>
+                        <Name>variable-1</Name>
+                        <Value>value-1</Value>  
+                    </AssignVariable>
+                </AssignMessage>");
+
+            var apigeePolicyName = "Assign-Variable-1";
+
+            var sut = new AssignMessageTransformation();
+
+            // Act
+            var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("set-variable", result.First().Name.LocalName);
+            Assert.Equal("variable-1", result.First().Attribute("name").Value);
+            Assert.Equal("value-1", result.First().Attribute("value").Value);
+        }
     }
 }
