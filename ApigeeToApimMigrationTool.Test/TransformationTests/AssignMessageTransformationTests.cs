@@ -100,7 +100,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
                @"<AssignMessage continueOnError=""false"" enabled=""true"" name=""Set-Body-1"">
                     <Set>
                         <Payload contentType=""application/json"">
-                            {""key"": ""value""}
+                            {""key"":""value""}
                         </Payload>
                     </Set>
                 </AssignMessage>");
@@ -143,5 +143,89 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
             Assert.Equal("variable-1", result.First().Attribute("name").Value);
             Assert.Equal("value-1", result.First().Attribute("value").Value);
         }
+
+        [Fact]
+        public async Task Transform_AssignVariableWithTemplate_SetsTemplatedVariable()
+        {
+            // Arrange
+            var apigeePolicyElement = XElement.Parse(
+              @"<AssignMessage continueOnError=""false"" enabled=""true"" name=""Assign-Variable-1"">
+                    <AssignVariable>
+                        <Name>variable-1</Name>
+                        <Template>{request.verb}</Template>  
+                    </AssignVariable>
+                </AssignMessage>");
+
+            var apigeePolicyName = "Assign-Variable-1";
+
+            var sut = new AssignMessageTransformation();
+
+            // Act
+            var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("set-variable", result.First().Name.LocalName);
+            Assert.Equal("variable-1", result.First().Attribute("name").Value);
+            Assert.Equal("@(context.Operation.Method)", result.First().Attribute("value").Value);
+
+        }
+
+        [Fact]
+        public async Task Transform_AssignVariableWithComplexTemplate_SetsTemplatedVariable()
+        {
+            // Arrange
+            var apigeePolicyElement = XElement.Parse(
+              @"<AssignMessage continueOnError=""false"" enabled=""true"" name=""Assign-Variable-1"">
+                    <AssignVariable>
+                        <Name>variable-1</Name>
+                        <Template>{request.verb}/{request.header.origin}</Template>  
+                    </AssignVariable>
+                </AssignMessage>");
+
+            var apigeePolicyName = "Assign-Variable-1";
+
+            var sut = new AssignMessageTransformation();
+
+            // Act
+            var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("set-variable", result.First().Name.LocalName);
+            Assert.Equal("variable-1", result.First().Attribute("name").Value);
+            Assert.Equal("@(context.Operation.Method + \"/\" + context.Request.Headers.GetValueOrDefault(\"origin\"))", result.First().Attribute("value").Value);
+
+        }
+
+        [Fact]
+        public async Task Transform_AssignVariableWithRefAndValue_SetsRefValueOrDefault()
+        {
+            // Arrange
+            var apigeePolicyElement = XElement.Parse(
+              @"<AssignMessage continueOnError=""false"" enabled=""true"" name=""Assign-Variable-1"">
+                    <AssignVariable>
+                        <Name>variable-1</Name>
+                        <Value>my-default-value</Value>
+                        <Ref>request.verb</Ref>
+                    </AssignVariable>
+                </AssignMessage>");
+
+            var apigeePolicyName = "Assign-Variable-1";
+
+            var sut = new AssignMessageTransformation();
+
+            // Act
+            var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
+
+            // Assert
+            Assert.Single(result);
+            Assert.Equal("set-variable", result.First().Name.LocalName);
+            Assert.Equal("variable-1", result.First().Attribute("name").Value);
+            Assert.Equal("@(context.Operation.Method ? context.Operation.Method : \"my-default-value\")", result.First().Attribute("value").Value);
+
+        }
+
+
     }
 }

@@ -63,7 +63,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         private XElement SetBody(XElement body)
         {
             var contentType = body.Attribute("contentType")?.Value;
-            var value = body.Value;
+            var value = body.Value.Trim();
             var newPolicy = new XElement("set-body");
             // TODO: Variable substitution can also be used in json payloads.
             if (!contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase))
@@ -105,8 +105,74 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         {
             var assignVariable = assignMessageElement.Element("AssignVariable");
             var name = assignVariable.Element("Name")?.Value;
+
             var value = assignVariable.Element("Value")?.Value;
-            var newPolicy = new XElement("set-variable", new XAttribute("name", name), new XAttribute("value", value));
+            var template = assignVariable.Element("Template")?.Value;
+            var refValue = assignVariable.Element("Ref")?.Value;
+
+            XElement newPolicy;
+            if (value != null && template == null && refValue == null)
+            {
+                // Simple case, just name and value
+                newPolicy = new XElement("set-variable", new XAttribute("name", name), new XAttribute("value", value));
+                return newPolicy;
+            }
+
+            // Having Ref and Template doesn't make sense (at least I don't think it does...)
+            if (refValue != null && template != null)
+            {
+                throw new Exception("Having both Ref and Template elements in AssignVariable is not supported.");
+            }
+
+            var expressionTranslator = new ExpressionTranslator();
+            var finalValue = string.Empty;
+
+            if (refValue != null)
+            {
+                refValue = expressionTranslator.Translate(refValue);
+                finalValue = refValue;
+            }
+            if (template != null)
+            {
+                template = template.Trim();
+                template = expressionTranslator.Translate(template);
+                var apimTemplateBuilder = new StringBuilder();
+                for (int i = 0; i < template.Length; i++)
+                {
+                    if (template[i] == '{')
+                    {
+                        if (i > 0 && template[i - 1] != '}')
+                        {
+                            apimTemplateBuilder.Append("\" + ");
+                        }
+                    }
+                    else if (template[i] == '}')
+                    {
+                        if (i < template.Length - 1)
+                        {
+                            apimTemplateBuilder.Append(" + ");
+                            if (template[i + 1] != '{')
+                            {
+                                apimTemplateBuilder.Append('"');
+                            }
+                        }
+                    }
+                    else
+                    {
+                        apimTemplateBuilder.Append(template[i]);
+                    }
+                }
+
+                finalValue = apimTemplateBuilder.ToString();
+            }
+
+            // Value is the default value if the Ref variable is not defined
+            if (value != null)
+            {
+                finalValue = $"{finalValue} ? {finalValue} : \"{value}\"";
+            }
+
+            newPolicy = new XElement("set-variable", new XAttribute("name", name), new XAttribute("value", $"@({finalValue})"));
             return newPolicy;
         }
 
