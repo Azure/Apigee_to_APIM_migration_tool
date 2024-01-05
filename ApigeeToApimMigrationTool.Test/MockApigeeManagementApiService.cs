@@ -11,6 +11,7 @@ namespace ApigeeToApimMigrationTool.Test
 {
     public class MockApigeeManagementApiService : IApigeeManagementApiService
     {
+
         public string AuthenticationToken { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
@@ -20,6 +21,7 @@ namespace ApigeeToApimMigrationTool.Test
         public string ProxyName { get; set; }
 
         public Task<string> DownloadApiProxyBundle(string proxyName, int revision)
+
         {
             return Task.FromResult(string.Empty);
         }
