@@ -10,6 +10,8 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IApimProvider
     {
+        string ApimName { get; }
+        string ApimUrl { get; }
         Task<ApiResource> CreateApi(string apiName, string apiDisplayName, string apiDescription, string apimName,
             string revision, string apiPath, string backendUrl, string? oauthConfigurationName);
         Task<ApiManagementProductResource> CreateProduct(string name, string displayName, string description, string apimName);
@@ -18,7 +20,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
         Task CreateOrUpdateOperation(string apiName, string description, string httpVerb);
         Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath);
         Task AddApiToProduct(string apiId);
-        Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, string keyVaultName);
+        Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value);
 
     }
 }

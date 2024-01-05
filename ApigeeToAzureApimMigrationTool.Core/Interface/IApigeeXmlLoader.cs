@@ -9,14 +9,14 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IApigeeXmlLoader
     {
-        public XDocument LoadProxyXml(string path, string proxyName);
+        public XDocument LoadProxyXml(string proxyName);
 
-        public XDocument LoadTargetXml(string path, string targetEndpointName);
+        public XDocument LoadTargetXml(string targetEndpointName);
 
-        public XDocument LoadProxyEndpointXml(string path, string proxyEndpointName);
-        public XDocument LoadPolicyXml(string path, string policyName);
-        public XDocument LoadSharedFlowBundleXml(string path, string sharedFlowName);
-        public XDocument LoadSharedFlowXml(string path, string sharedFlowName);
-        public XDocument LoadSharedFlowPolicyXml(string path, string policyName);
+        public XDocument LoadProxyEndpointXml(string proxyEndpointName);
+        public XDocument LoadPolicyXml(string policyName);
+        public XDocument LoadSharedFlowBundleXml(string sharedFlowName);
+        public XDocument LoadSharedFlowXml(string sharedFlowName);
+        public XDocument LoadSharedFlowPolicyXml(string policyName);
     }
 }

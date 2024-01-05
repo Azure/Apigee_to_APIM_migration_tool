@@ -11,17 +11,27 @@ namespace ApigeeToApimMigrationTool.Test
 {
     public class MockApigeeManagementApiService : IApigeeManagementApiService
     {
-        public Task<string> DownloadApiProxyBundle(string proxyName, int revision, string bearerToken)
+
+        public string AuthenticationToken { get; set; }
+        public string Username { get; set; }
+        public string Password { get; set; }
+
+        public string? Environment { get; private set; }
+
+        public string ProxyName { get; set; }
+
+        public Task<string> DownloadApiProxyBundle(string proxyName, int revision)
+
         {
             return Task.FromResult(string.Empty);
         }
 
-        public Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision, string bearerToken)
+        public Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision)
         {
             return Task.FromResult(string.Empty);
         }
 
-        public Task<ApiProductMetaData> GetApiProductByName(string productName, string bearerToken)
+        public Task<ApiProductMetaData> GetApiProductByName(string productName)
         {
             var apiProduct = new ApiProductMetaData
             {
@@ -34,7 +44,7 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.FromResult(apiProduct);
         }
 
-        public Task<ApigeeEntityModel> GetApiProxyByName(string proxyName, string bearerToken)
+        public Task<ApigeeEntityModel> GetApiProxyByName(string proxyName)
         {
             var apiProxy = new ApigeeEntityModel
             {
@@ -63,7 +73,7 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.FromResult(string.Empty);
         }
 
-        public Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier, string bearerToken)
+        public Task<KeyValueMapModel> GetKeyValueMapByName(string proxyName, string environment, string mapIdentifier)
         {
             var keyMap = new KeyValueMapModel
             {
@@ -83,13 +93,13 @@ namespace ApigeeToApimMigrationTool.Test
 
         }
 
-        public Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName, string bearerToken)
+        public Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName)
         {
             var sharedFlow = new ApigeeEntityModel { name = sharedFlowName, revision = new string[] { "1" } };
             return Task.FromResult(sharedFlow);
         }
 
-        public Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment, string bearerToken)
+        public Task<ApigeeTargetServerModel> GetTargetServerByName(string targetServerName, string environment)
         {
             var targetServer = new ApigeeTargetServerModel
             {
@@ -111,7 +121,7 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.FromResult(targetServer);
         }
 
-        public Task PopulateProxyReferenceDatabase(string bearerToken)
+        public Task PopulateProxyReferenceDatabase()
         {
             return Task.CompletedTask;
         }

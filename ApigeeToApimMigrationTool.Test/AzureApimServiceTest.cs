@@ -2,6 +2,7 @@ using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Dto;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using ApigeeToAzureApimMigrationTool.Service;
+using ApigeeToAzureApimMigrationTool.Service.Transformations;
 using Newtonsoft.Json;
 using System.Reflection;
 using System.Xml.Linq;
@@ -23,7 +24,17 @@ namespace ApigeeToApimMigrationTool.Test
             _mockApigeeXmlLoader = new MockApigeeXmlLoader();
             _mockApimProvider = new MockApimProvider();
 
-            _azureApimServiceUnderTest = new AzureApimService(_mockApigeeManagementApiService, _mockApimProvider, _mockApigeeXmlLoader, string.Empty);
+            // We need a real transformation factory and transformer here because we are testing the integration between the service
+            // and the transformer
+            var policyTransformationFactory = new PolicyTransformationFactory(
+                _mockApigeeManagementApiService, _mockApimProvider, _mockApigeeXmlLoader);
+
+            var policyTransformer = new ApigeeToApimPolicyTransformer(policyTransformationFactory);
+
+            _azureApimServiceUnderTest = new AzureApimService(
+                apimProvider: _mockApimProvider, 
+                apigeeXmlLoader: _mockApigeeXmlLoader,
+                policyTransformer: policyTransformer);
 
             SetupDefaultPolicies();
         }
@@ -52,7 +63,12 @@ namespace ApigeeToApimMigrationTool.Test
                     <AssignTo createNew=""false"" transport=""http"" type=""request""/>
                  </AssignMessage>"));
 
-            await _azureApimServiceUnderTest.ImportApi("testApi", string.Empty, "Test-Api", string.Empty, string.Empty, string.Empty, string.Empty);
+            await _azureApimServiceUnderTest.ImportApi(
+                apimName: "testApi", 
+                proxyName: "Test-Api", 
+                oauthConfigName: string.Empty, 
+                environment: string.Empty, 
+                keyVaultName: string.Empty);
 
             var policy = _mockApimProvider.PolicyXml;
 
