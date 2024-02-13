@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
-    public interface IBundleProvider
+    public interface IBundle
     {
-        IBundle GetApiProxyBundle(string proxyOrProductName);
-        IBundle GetSharedFlowBundle(string sharedFlowName);
+        Task LoadBundle();
+        string GetBundlePath();
     }
 }

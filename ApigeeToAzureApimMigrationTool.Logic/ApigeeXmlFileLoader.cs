@@ -11,43 +11,50 @@ namespace ApigeeToAzureApimMigrationTool.Service
     public class ApigeeXmlFileLoader : IApigeeXmlLoader
     {
         private readonly IBundleProvider _bundleProvider;
-        public ApigeeXmlFileLoader(IBundleProvider bundleProvider)
+        public ApigeeXmlFileLoader(IBundleProvider bundle)
         {
-            _bundleProvider = bundleProvider;
+            _bundleProvider = bundle;
         }
         public XDocument LoadProxyXml(string proxyName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), "apiproxy", $"{proxyName}.xml"));
+            var bundle = _bundleProvider.GetApiProxyBundle(proxyName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), $"{proxyName}.xml"));
         }
 
-        public XDocument LoadTargetXml(string targetEndpointName)
+        public XDocument LoadTargetXml(string proxyName, string targetEndpointName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), "apiproxy", "targets", $"{targetEndpointName}.xml"));
+            var bundle = _bundleProvider.GetApiProxyBundle(proxyName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), "targets", $"{targetEndpointName}.xml"));
         }
 
-        public XDocument LoadProxyEndpointXml(string proxyEndpointName)
+        public XDocument LoadProxyEndpointXml(string proxyName, string proxyEndpointName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), "apiproxy", "proxies", $"{proxyEndpointName}.xml"));
+            var bundle = _bundleProvider.GetApiProxyBundle(proxyName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), "proxies", $"{proxyEndpointName}.xml"));
         }
 
-        public XDocument LoadPolicyXml(string policyName)
+        public XDocument LoadPolicyXml(string proxyName, string policyName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), "apiproxy", "policies", $"{policyName}.xml"));
+            var bundle = _bundleProvider.GetApiProxyBundle(proxyName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), "policies", $"{policyName}.xml"));
         }
 
         public XDocument LoadSharedFlowBundleXml(string sharedFlowName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), sharedFlowName, "sharedflowbundle", $"{sharedFlowName}.xml"));
+            var bundle = _bundleProvider.GetSharedFlowBundle(sharedFlowName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), $"{sharedFlowName}.xml"));
         }
 
-        public XDocument LoadSharedFlowXml(string sharedFlowName)
+        public XDocument LoadSharedFlowXml(string sharedFlowName, string sharedFlowFileName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), sharedFlowName, "sharedflowbundle", "sharedflows", $"{sharedFlowName}.xml"));
+            var bundle = _bundleProvider.GetSharedFlowBundle(sharedFlowName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), "sharedflows", $"{sharedFlowFileName}.xml"));
         }
 
-        public XDocument LoadSharedFlowPolicyXml(string policyName)
+        public XDocument LoadSharedFlowPolicyXml(string sharedFlowName, string policyName)
         {
-            return XDocument.Load(Path.Combine(_bundleProvider.GetBundlePath(), "sharedflowbundle", "policies", $"{policyName}.xml"));
+            var bundle = _bundleProvider.GetSharedFlowBundle(sharedFlowName);
+            return XDocument.Load(Path.Combine(bundle.GetBundlePath(), "policies", $"{policyName}.xml"));
         }
     }
 }

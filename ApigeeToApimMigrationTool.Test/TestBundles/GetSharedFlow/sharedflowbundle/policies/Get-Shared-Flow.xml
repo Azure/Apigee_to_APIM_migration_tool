@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<KeyValueMapOperations async="false" continueOnError="false" enabled="true" name="Get-Shared-Flow" mapIdentifier="TargetUrls">
+  <DisplayName>Get Shared Flow</DisplayName>
+  <ExpiryTimeInSecs>3600</ExpiryTimeInSecs>
+  <Scope>environment</Scope>
+  <Get assignTo="myVariable">
+    <Key>
+      <Parameter>MyKey</Parameter>
+    </Key>
+  </Get>
+</KeyValueMapOperations>

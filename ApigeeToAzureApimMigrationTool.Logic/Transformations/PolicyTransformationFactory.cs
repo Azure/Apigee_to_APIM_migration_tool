@@ -14,11 +14,13 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         private readonly IApigeeXmlLoader _apigeeXmlLoader;
         private readonly IApigeeManagementApiService _apigeeService;
         private readonly IApimProvider _apimProvider;
-        public PolicyTransformationFactory(IApigeeManagementApiService apigeeService, IApimProvider apimProvider, IApigeeXmlLoader apigeeXmlLoader)
+        private readonly IBundleProvider _bundleProvider;
+        public PolicyTransformationFactory(IApigeeManagementApiService apigeeService, IApimProvider apimProvider, IBundleProvider bundleProvider, IApigeeXmlLoader apigeeXmlLoader)
         {
             _apigeeService = apigeeService;
             _apimProvider = apimProvider;
             _apigeeXmlLoader = apigeeXmlLoader;
+            _bundleProvider = bundleProvider;
         }
         public IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables)
         {
@@ -41,7 +43,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 case "PopulateCache":
                     return new PopulateCacheTransformation(policyVariables);
                 case "FlowCallout":
-                    return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _apigeeService);
+                    return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _bundleProvider, _apigeeService);
                 default:
                     return new NullTransformation();
 

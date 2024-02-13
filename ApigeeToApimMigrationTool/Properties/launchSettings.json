@@ -1,7 +1,8 @@
 {
   "profiles": {
     "ApigeeToApimMigrationTool": {
-      "commandName": "Project"
+      "commandName": "Project",
+      "commandLineArgs": "--proxyOrProduct Product \r\n--proxyOrProductName CsgApigeeToApim\r\n--apigeeConfigDir C:\\Users\\jaspecla\\Downloads\\CSGApigeeToAPIM\\CSGApigeeToAPIM\\\r\n--azureAppId 8f6cda1e-3517-4a24-ad13-b01c05a9d061 \r\n--azureTenantId a50d6ec8-b8c1-4ff3-b0e0-a0b11c5ed77d \r\n--azureSubscriptionId 489c638b-c510-40c9-a137-f1fdb6d1914f \r\n--apimUrl https://apigee-to-apim-test.azure-api.net \r\n--apimName apigee-to-apim-test \r\n--apimResourceGroup Apigee_To_Apim_Test"
     }
   }
 }

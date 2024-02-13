@@ -15,6 +15,7 @@ namespace ApigeeToApimMigrationTool.Test
         public string ApimName { get; set; }
         public string ApimUrl { get; set; }
         public XDocument PolicyXml { get; private set; } = new XDocument();
+        public IDictionary<string, XDocument> PolicyFragments { get; private set; } = new Dictionary<string, XDocument>();  
 
         public Task AddApiToProduct(string apiId)
         {
@@ -50,6 +51,7 @@ namespace ApigeeToApimMigrationTool.Test
 
         public Task CreatePolicyFragment(string policyFragmentName, string apimName, string policyFragmentXml, string policyFragmentDescription)
         {
+            PolicyFragments.Add(policyFragmentName, XDocument.Parse(policyFragmentXml));
             return Task.CompletedTask;
         }
 

@@ -4,13 +4,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace ApigeeToApimMigrationTool.Test
 {
-    public class MockPolicyTransformer : IApimPolicyTransformer
+    public class MockBundleProvider : IBundleProvider
     {
-        public Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader, string apimName, string policyName)
+        public IBundle GetApiProxyBundle(string proxyOrProductName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IBundle GetSharedFlowBundle(string sharedFlowName)
         {
             throw new NotImplementedException();
         }
