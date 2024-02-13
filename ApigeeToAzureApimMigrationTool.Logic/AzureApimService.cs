@@ -40,12 +40,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
             string endpointUrl = "";
             if (!string.IsNullOrEmpty(apiTargetEndpoint))
             {
-                var apiTargetXml = _apigeeXmlLoader.LoadTargetXml(apiTargetEndpoint);
+                var apiTargetXml = _apigeeXmlLoader.LoadTargetXml(proxyName, apiTargetEndpoint);
                 endpointUrl = !apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Descendants("URL").Any() ?
                     apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("Path").Value : apiTargetXml.Element("TargetEndpoint").Element("HTTPTargetConnection").Element("URL").Value;
             }
 
-            var defaultApiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyEndpointElements.First().Value);
+            var defaultApiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyName, proxyEndpointElements.First().Value);
             string apiBasePath = defaultApiProxyEndpointXml.Root.Element("HTTPProxyConnection").Element("BasePath").Value;
 
             var apiResource = await _apimProvider.CreateApi(apiName, displayName, description, apimName, revision, apiBasePath, endpointUrl, oauthConfigName);
@@ -64,45 +64,45 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyEndpoint.Value);
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyName, proxyEndpoint.Value);
 
                 // get pre-flow request policies
                 IEnumerable<XElement>? preFlowRequestSteps = apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(preFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(preFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
                 
                 //get post-flow request policies
                 IEnumerable<XElement>? postFlowRequestSteps = apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(postFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(postFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
                 //get pre-flow response policies
                 IEnumerable<XElement>? preFlowResponseSteps = apiProxyEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(preFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(preFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
                 //get post-flow response policies
                 IEnumerable<XElement>? postFlowResponseSteps = apiProxyEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(postFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(postFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
             }
 
             foreach (var targetEndpoint in targetEndpointElements)
             {
-                var targetEndpointXml = _apigeeXmlLoader.LoadTargetXml(targetEndpoint.Value);
+                var targetEndpointXml = _apigeeXmlLoader.LoadTargetXml(proxyName, targetEndpoint.Value);
 
                 //get pre-flow request policies
                 IEnumerable<XElement>? targetPreFlowRequestSteps = targetEndpointXml.Root?.Element("PreFlow")?.Element("Request")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(targetPreFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(targetPreFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
                 //get post-flow request policies
                 IEnumerable<XElement>? targetPostFlowRequestSteps = targetEndpointXml.Root?.Element("PostFlow")?.Element("Request")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(targetPostFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(targetPostFlowRequestSteps, inboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
                 //get pre-flow response policies
                 IEnumerable<XElement>? targetPreFlowResponseSteps = targetEndpointXml.Root?.Element("PreFlow")?.Element("Response")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(targetPreFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(targetPreFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
                 //get post-flow response policies
                 IEnumerable<XElement>? targetPostFlowResponseSteps = targetEndpointXml.Root?.Element("PostFlow")?.Element("Response")?.Elements("Step");
-                await _policyTransformer.TransformPoliciesInCollection(targetPostFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName);
+                await _policyTransformer.TransformPoliciesInCollection(targetPostFlowResponseSteps, outboundAzureApimPolicySection, policyXmlLoader, apimName, proxyName);
 
             }
 
@@ -117,7 +117,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             foreach (var proxyEndpoint in proxyEndpointElements)
             {
-                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyEndpoint.Value);
+                var apiProxyEndpointXml = _apigeeXmlLoader.LoadProxyEndpointXml(proxyName, proxyEndpoint.Value);
 
                 var flows = apiProxyEndpointXml.Root.Element("Flows");
 
@@ -127,11 +127,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     {
                         //get flow request policies
                         IEnumerable<XElement>? flowRequestSteps = flow.Element("Request")?.Elements("Step");
-                        await _policyTransformer.TransformPoliciesInCollection(flowRequestSteps, inboundAzureApimOperationPolicySection, policyXmlLoader, apimName);
+                        await _policyTransformer.TransformPoliciesInCollection(flowRequestSteps, inboundAzureApimOperationPolicySection, policyXmlLoader, apimName, proxyName);
 
                         //get flow response policies
                         IEnumerable<XElement>? flowResponseSteps = flow.Element("Response")?.Elements("Step");
-                        await _policyTransformer.TransformPoliciesInCollection(flowResponseSteps, outboundAzureApimOperationPolicySection, policyXmlLoader, apimName);
+                        await _policyTransformer.TransformPoliciesInCollection(flowResponseSteps, outboundAzureApimOperationPolicySection, policyXmlLoader, apimName, proxyName);
 
                         string operationName = flow.Attribute("name").Value;
                         string operationDescription = flow.Element("Description").Value;

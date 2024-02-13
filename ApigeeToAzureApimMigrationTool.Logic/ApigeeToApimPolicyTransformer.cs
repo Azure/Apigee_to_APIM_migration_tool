@@ -22,7 +22,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyTransformationFactory = policyTransformationFactory;
             _policyVariables = new List<KeyValuePair<string, string>>();
         }
-        public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, XDocument> xmlLoader, string apimName)
+        public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader, string apimName, string proxyName)
         {
             if (elements == null)
             {
@@ -51,7 +51,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     condition = string.Empty;
                 }
 
-                var policyXml = xmlLoader(policyName);
+                var policyXml = xmlLoader(proxyName, policyName);
 
                 var rootElement = policyXml.Root;
                 if (rootElement == null)

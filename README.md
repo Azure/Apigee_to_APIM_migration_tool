@@ -8,27 +8,27 @@ The main purpose of this application is to migrate Apigee API Products, API Prox
 Migration tool requires input parameters listed below. Alternatively it can use a JSON file (called appsetting.json) to store information related to Azure Service Principal and Azure APIM.
 If neither is provided it will ask for the parameters to be entered manually during run time.
 
-Order| Parameter Name |	Description|
------|----------------|------------|
-1 |	Apigee Management Api Base Url |	Base URL for Apigee's management API (ex: https://api.enterprise.apigee.com)
-2 |	Apigee Authentication BaseUrl |	Base URL for authentication against Apigee (ex: https://yourcompany.login.apigee.com)
-3 |	Apigee Organization Name |	Name of the Apigee organization that the API Proxy is hosted in
-4	| Proxy or Product |	Define what you want to migrate. Accepted vales are "product" and "proxy"
-5	| API Product or Proxy Name |	Name of the Apigee API Product or Proxy to migrate
-6 |	Apigee username | Apigee username to use to authenticate against Apigee
-7 |	Apigee password | Apigee password to use to authenticate against Apigee
-8 |	App ID| App ID of the Service Principal created in Azure
-9	| App Password |	Password of the Service Principal created in Azure
-10	|Tenant ID |	Tenant ID of the Azure Active Directory
-11 |	Subscription ID |	Azure Subscription ID where Azure APIM is deployed in
-12	| APIM URL| URL of the target Azure APIM instance
-13 |	APIM Name |	Name of the target Azure APIM instance
-14 |	Resource Group Name |	Name of the Resource Group that Azure APIM is deployed in
-15 |	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional parameter, provide empty string if not used)</code>
-16 | Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional parameter, provide empty string if not used)</code>
-17 | Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional parameter, provide empty string if not used)</code>
-18 |	Apigee environment Name |	Name of the Apigee environment the proxy is being migrated from
-19 |	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional parameter, don't provide if not used)</code>
+Parameter Name |	Parameter Description|Notes|
+---------------|-------------------------|-----|
+--apigeeManagementApiBaseUrl |	Apigee Management Api Base Url |	Base URL for Apigee's management API (ex: https://api.enterprise.apigee.com)
+--apigeeAuthenticationBaseUrl|	Apigee Authentication BaseUrl |	Base URL for authentication against Apigee (ex: https://yourcompany.login.apigee.com)
+--apigeeOrganizationName |	Apigee Organization Name |	Name of the Apigee organization that the API Proxy is hosted in
+--proxyOrProduct| Proxy or Product |	Define what you want to migrate. Accepted vales are "product" and "proxy"
+--proxyOrProductName| API Product or Proxy Name |	Name of the Apigee API Product or Proxy to migrate
+--apigeeUsername|	Apigee username | Apigee username to use to authenticate against Apigee
+--apigeePassword|	Apigee password | Apigee password to use to authenticate against Apigee
+--azureAppId|	App ID| App ID of the Service Principal created in Azure
+--azurePassword| App Password |	Password of the Service Principal created in Azure
+--azureTenantId|Tenant ID |	Tenant ID of the Azure Active Directory
+--azureSubscriptionId|	Subscription ID |	Azure Subscription ID where Azure APIM is deployed in
+--apimUrl| APIM URL| URL of the target Azure APIM instance
+--apimName|	APIM Name |	Name of the target Azure APIM instance
+--apimResourceGroup|	Resource Group Name |	Name of the Resource Group that Azure APIM is deployed in
+--apimOauthConfigName|	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional parameter, provide empty string if not used)</code>
+--apimOauthBackendAppId| Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional parameter, provide empty string if not used)</code>
+--apimOauthTenantId| Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional parameter, provide empty string if not used)</code>
+--apigeeEnvironmentName|	Apigee environment Name |	Name of the Apigee environment the proxy is being migrated from
+--keyVaultName|	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional parameter, don't provide if not used)</code>
 
 ## Entity Mapping
 

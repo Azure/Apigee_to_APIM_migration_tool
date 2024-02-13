@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy revision="4" name="Test-API">
+  <Basepaths>/profile</Basepaths>
+  <ConfigurationVersion majorVersion="4" minorVersion="0"/>
+  <CreatedAt>1554751795786</CreatedAt>
+  <CreatedBy>jaspecla@microsoft.com</CreatedBy>
+  <Description>Test API</Description>
+  <DisplayName>Test-API</DisplayName>
+  <LastModifiedAt>1645821267509</LastModifiedAt>
+  <LastModifiedBy>jaspecla@microsoft.com</LastModifiedBy>
+  <Policies>
+    <Policy>SharedFlowCallout</Policy>
+  </Policies>
+  <ProxyEndpoints>
+    <ProxyEndpoint>default</ProxyEndpoint>
+  </ProxyEndpoints>
+  <Resources/>
+  <Spec></Spec>
+  <TargetServers/>
+  <TargetEndpoints>
+    <TargetEndpoint>default</TargetEndpoint>
+  </TargetEndpoints>
+</APIProxy>

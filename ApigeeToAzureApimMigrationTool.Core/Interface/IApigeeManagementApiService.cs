@@ -10,9 +10,9 @@ namespace ApigeeToAzureApimMigrationTool.Core
         string Password { get; set; }
         string? Environment { get; }
         string ProxyName { get; }
-        Task<string> DownloadApiProxyBundle(string proxyName, int revision);
+        Task<string> DownloadApiProxyBundle(string basePath, string proxyName, int revision);
         Task<ApigeeEntityModel> GetApiProxyByName(string proxyName);
-        Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision);
+        Task<string> DownloadSharedFlowBundle(string basePath, string sharedFlowName, int revision);
         Task<ApigeeEntityModel> GetSharedFlowByName(string sharedFlowName);
         Task PopulateProxyReferenceDatabase();
         Task<ApiProductMetaData> GetApiProductByName(string productName);

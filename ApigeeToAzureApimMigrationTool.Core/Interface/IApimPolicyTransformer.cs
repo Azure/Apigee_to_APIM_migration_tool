@@ -9,6 +9,6 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IApimPolicyTransformer
     {
-        public Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, XDocument> xmlLoader, string apimName);
+        public Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader, string apimName, string policyName);
     }
 }

@@ -18,7 +18,7 @@ namespace ApigeeToApimMigrationTool.Test
         public Dictionary<string, XDocument> SharedFlowXml { get; set; } = new Dictionary<string, XDocument>();
         public Dictionary<string, XDocument> TargetXml { get; set; } = new Dictionary<string, XDocument>();
 
-        public XDocument LoadPolicyXml(string policyName)
+        public XDocument LoadPolicyXml(string proxyName, string policyName)
         {
             if (PolicyXml.ContainsKey(policyName))
             {
@@ -30,7 +30,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadProxyEndpointXml(string proxyEndpointName)
+        public XDocument LoadProxyEndpointXml(string proxyName, string proxyEndpointName)
         {
             if (ProxyEndpointXml.ContainsKey(proxyEndpointName))
             {
@@ -66,7 +66,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadSharedFlowPolicyXml(string policyName)
+        public XDocument LoadSharedFlowPolicyXml(string sharedFlowName, string policyName)
         {
             if (SharedFlowPolicyXml.ContainsKey(policyName))
             {
@@ -78,7 +78,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadSharedFlowXml(string sharedFlowName)
+        public XDocument LoadSharedFlowXml(string sharedFlowName, string sharedFlowFileName)
         {
             if (SharedFlowXml.ContainsKey(sharedFlowName))
             {
@@ -90,7 +90,7 @@ namespace ApigeeToApimMigrationTool.Test
             }
         }
 
-        public XDocument LoadTargetXml(string targetEndpointName)
+        public XDocument LoadTargetXml(string proxyName, string targetEndpointName)
         {
             if (TargetXml.ContainsKey(targetEndpointName))
             {

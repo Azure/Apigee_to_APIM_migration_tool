@@ -69,7 +69,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             if (url.StartsWith('/'))
                 url = apimUrl + url;
 
-            if (element.Element("Request").Element("Set").Element("Path") != null)
+            if (element.Element("Request")?.Element("Set")?.Element("Path") != null)
             {
                 string path = element.Element("Request").Element("Set").Element("Path").Value;
                 if (path.StartsWith("{"))
@@ -80,7 +80,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 
             newPolicy.Add(new XElement("set-url", url));
 
-            string verb = element.Element("Request").Element("Set").Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
+            string verb = element.Element("Request")?.Element("Set")?.Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
             newPolicy.Add(new XElement("set-method", verb));
 
             var headers = element.Element("Request").Element("Set")?.Element("Headers")?.Elements("Header");

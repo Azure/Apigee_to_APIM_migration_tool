@@ -42,6 +42,13 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             if (getElements != null)
                 foreach (var getElement in getElements)
                 {
+                    // assignTo not yet supported
+                    var assignTo = getElement.Attribute("assignTo");
+                    if (assignTo != null) 
+                    {
+                        Console.WriteLine("WARNING: assignTo is not supported for Key Value Maps.");
+                        return new List<XElement>();
+                    }
                     var index = getElement.Attribute("index").Value;
                     var key = getElement.Element("Key").Element("Parameter").Value;
                     var variableName = getElement.Attribute("assignTo").Value;

@@ -15,6 +15,7 @@ using Azure.Identity;
 using Azure;
 using System.Xml.Linq;
 using System.Net;
+using ApigeeToApimMigrationTool.Core.Config;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -39,17 +40,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private ApiManagementProductResource? _productResource;
         private ApiOperationCollection? _apiOperations;
 
-        public AzureApimProvider(string subscriptionId, string tenantId, string clientId, string clientSecret, string resourceGroupName, string apimName, string apimUrl, string keyVaultName)
+        public AzureApimProvider(ApimConfiguration apimConfiguration, EntraConfiguration entraConfiguration, string keyVaultName)
         {
-            _subscriptionId = subscriptionId;
-            _tenantId = tenantId;
-            _clientId = clientId;
-            _clientSecret = clientSecret;
-            _resourceGroupName = resourceGroupName;
+            _subscriptionId = entraConfiguration.SubscriptionId;
+            _tenantId = entraConfiguration.TenantId;
+            _clientId = entraConfiguration.AppId;
+            _clientSecret = entraConfiguration.Password;
+            _resourceGroupName = apimConfiguration.ResourceGroup;
             _keyVaultName = keyVaultName;
 
-            ApimName = apimName;
-            ApimUrl = apimUrl;
+            ApimName = apimConfiguration.Name;
+            ApimUrl = apimConfiguration.Url;
 
             // TODO: instantiate properly... but does it matter in a console app?
             _httpClient = new HttpClient();

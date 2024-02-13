@@ -17,17 +17,19 @@ namespace ApigeeToApimMigrationTool.Test
         private MockApigeeManagementApiService _mockApigeeManagementApiService;
         private MockApigeeXmlLoader _mockApigeeXmlLoader;
         private MockApimProvider _mockApimProvider;
+        private MockBundleProvider _mockBundleProvider;
 
         public AzureApimServiceTest()
         {
             _mockApigeeManagementApiService = new MockApigeeManagementApiService();
             _mockApigeeXmlLoader = new MockApigeeXmlLoader();
             _mockApimProvider = new MockApimProvider();
+            _mockBundleProvider = new MockBundleProvider();
 
             // We need a real transformation factory and transformer here because we are testing the integration between the service
             // and the transformer
             var policyTransformationFactory = new PolicyTransformationFactory(
-                _mockApigeeManagementApiService, _mockApimProvider, _mockApigeeXmlLoader);
+                _mockApigeeManagementApiService, _mockApimProvider, _mockBundleProvider, _mockApigeeXmlLoader);
 
             var policyTransformer = new ApigeeToApimPolicyTransformer(policyTransformationFactory);
 

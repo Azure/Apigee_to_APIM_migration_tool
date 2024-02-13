@@ -20,13 +20,13 @@ namespace ApigeeToApimMigrationTool.Test
 
         public string ProxyName { get; set; }
 
-        public Task<string> DownloadApiProxyBundle(string proxyName, int revision)
+        public Task<string> DownloadApiProxyBundle(string basePath, string proxyName, int revision)
 
         {
             return Task.FromResult(string.Empty);
         }
 
-        public Task<string> DownloadSharedFlowBundle(string sharedFlowName, int revision)
+        public Task<string> DownloadSharedFlowBundle(string basePath, string sharedFlowName, int revision)
         {
             return Task.FromResult(string.Empty);
         }

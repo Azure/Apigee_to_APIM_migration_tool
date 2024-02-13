@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<TargetEndpoint name="default">
+  <Description/>
+  <FaultRules/>
+  <PreFlow name="PreFlow">
+    <Request>
+      <Step>
+        <Name>SharedFlowCallout</Name>
+      </Step>
+    </Request>
+    <Response/>
+  </PreFlow>
+  <HTTPTargetConnection>
+    <Properties>
+      <Property name="io.timeout.millis">180000</Property>
+    </Properties>
+    <URL>https://SetInDynamicUrlSharedflow</URL>
+  </HTTPTargetConnection>
+</TargetEndpoint>
