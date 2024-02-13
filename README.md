@@ -5,11 +5,11 @@ The main purpose of this application is to migrate Apigee API Products, API Prox
 
 ![image](https://github.com/Azure/Apigee_to_APIM_migration_tool/assets/106823811/8df21f97-503a-4af0-97ae-9f7675dcc8c8)
 
-Migration tool requires input parameters listed below. Alternatively it can use a JSON file (called appsetting.json) to store information related to Azure Service Principal and Azure APIM.
-If neither is provided it will ask for the parameters to be entered manually during run time.
+Migration tool requires input parameters listed below. Alternatively it can use a JSON file to store information related to Azure Service Principal and Azure APIM.
 
 Parameter Name |	Parameter Description|Notes|
 ---------------|-------------------------|-----|
+--configFile|Config File Name|JSON configuration file so you don't need to specify all of these command line options (see apigeeToApimConfig.SAMPLE.json)
 --apigeeManagementApiBaseUrl |	Apigee Management Api Base Url |	Base URL for Apigee's management API (ex: https://api.enterprise.apigee.com)
 --apigeeAuthenticationBaseUrl|	Apigee Authentication BaseUrl |	Base URL for authentication against Apigee (ex: https://yourcompany.login.apigee.com)
 --apigeeOrganizationName |	Apigee Organization Name |	Name of the Apigee organization that the API Proxy is hosted in
