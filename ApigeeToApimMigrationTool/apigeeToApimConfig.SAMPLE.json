@@ -1,0 +1,32 @@
+{
+  "ConnectionStrings": {
+    "DataConnection": ""
+  },
+  "Apigee": {
+    "OrganizationName": "my apigee org",
+    "AuthenticationBaseUrl": "https://yourcompany.login.apigee.com",
+    "ManagementBaseUrl": "https://api.enterprise.apigee.com",
+    "Passcode": "my passcode",
+    "Username": "my username",
+    "Password": "my password",
+    "ProxyOrProduct": "Product",
+    "ProxyOrProductName": "MyProductName",
+    "EnvironmentName": "my environment",
+    "ConfigDir": "C:\\apigee\\files\\MyFiles",
+    "UseTestService": false
+  },
+  "Entra": {
+    "AppId": "my app ID",
+    "Password": "my app secret",
+    "TenantId": "my tenant ID",
+    "SubscriptionId": "my subscription ID"
+  },
+  "Apim": {
+    "Url": "https://my-apim.azure-api.net",
+    "Name": "my-apim-name",
+    "ResourceGroup": "My_Apim_Resource_Group",
+    "OAuthConfigName": "my-apim-oauth-config-name",
+    "OAuthBackendAppId": "my-apim-oauth-backend-app-id",
+    "OAuthTenantId": "my-apim-oauth-tenant-id"
+  }
+}

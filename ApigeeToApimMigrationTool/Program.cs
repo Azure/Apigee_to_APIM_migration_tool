@@ -7,9 +7,11 @@ using ApigeeToAzureApimMigrationTool.Core.Interface;
 using ApigeeToAzureApimMigrationTool.Service;
 using ApigeeToAzureApimMigrationTool.Service.Bundles;
 using ApigeeToAzureApimMigrationTool.Service.Transformations;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.CommandLine;
+using System.Configuration;
 
 Console.WriteLine("Starting up ...");
 
@@ -108,6 +110,10 @@ var databaseConnectionStringOption = new Option<string>(
     description: "Database connection string")
 { IsHidden = true };
 
+var configFileOption = new Option<string>(
+    name: "--configFile",
+    description: "Path to the configuration file (optional)");
+
 var rootCommand = new RootCommand("Apigee to Azure APIM migration tool")
 {
     apigeeOrgNameOption,
@@ -131,25 +137,41 @@ var rootCommand = new RootCommand("Apigee to Azure APIM migration tool")
     apimOauthBackendAppIdOption,
     apimOauthTenantIdOption,
     keyVaultNameOption,
-    databaseConnectionStringOption
+    databaseConnectionStringOption,
+    configFileOption
 };
 
-rootCommand.SetHandler(async (apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString) =>
+rootCommand.SetHandler(async (apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString, configFile) =>
 {
-    await RunMigration(apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString);
+
+    await RunMigration(apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString, configFile);
 }, 
 new ApigeeConfigurationBinder(apigeeOrgNameOption, apigeeAuthenticationBaseUrlOption, apigeeManagementApiBaseUrlOption, apigeePasscodeOption, apigeeUsernameOption, apigeePasswordOption, proxyOrProductOption, proxyOrProductNameOption, apigeeEnvironmentNameOption, apigeeConfigDirOption),
 new EntraConfigurationBinder(azureAppIdOption, azurePasswordOption, azureTenantIdOption, azureSubscriptionIdOption), 
 new ApimConfigurationBinder(apimUrlOption, apimNameOption, apimResourceGroupOption, apimOauthConfigNameOption, apimOauthBackendAppIdOption, apimOauthTenantIdOption), 
-keyVaultNameOption, databaseConnectionStringOption);
+keyVaultNameOption, databaseConnectionStringOption, configFileOption);
 
 await rootCommand.InvokeAsync(args);
 
 #region dependency injection
 async Task RunMigration(ApigeeConfiguration apigeeConfiguration, EntraConfiguration entraConfiguration, ApimConfiguration apimConfiguration, 
     string keyVaultName, 
-    string databaseConnectionString)
+    string databaseConnectionString, string configFile)
 {
+    if (!string.IsNullOrEmpty(configFile))
+    {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile(configFile)
+            .Build();
+
+        databaseConnectionString = config.GetConnectionString("DataConnection");
+        keyVaultName = config["KeyVaultName"];
+
+        config.Bind("Apigee", apigeeConfiguration);
+        config.Bind("Entra", entraConfiguration);
+        config.Bind("Apim", apimConfiguration);
+    }
+
     Console.WriteLine("registring dependencies ...");
 
     HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);

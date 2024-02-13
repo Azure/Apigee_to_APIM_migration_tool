@@ -400,3 +400,5 @@ FodyWeavers.xsd
 **/credentials.json
 **/appsettings.json
 *.dccache
+/ApigeeToApimMigrationTool/Properties/launchSettings.json
+/ApigeeToApimMigrationTool/apigeeToApimConfig.json
