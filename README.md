@@ -10,6 +10,7 @@ Migration tool requires input parameters listed below. Alternatively it can use 
 Parameter Name |	Parameter Description|Notes|
 ---------------|-------------------------|-----|
 --configFile|Config File Name|JSON configuration file so you don't need to specify all of these command line options (see apigeeToApimConfig.SAMPLE.json)
+--apigeeConfigDir|Config Directory Name|A directory containing pre-downloaded Apigee policy XML files, useful for testing if you don't want to continually download your policies from Apigee with every run.
 --apigeeManagementApiBaseUrl |	Apigee Management Api Base Url |	Base URL for Apigee's management API (ex: https://api.enterprise.apigee.com)
 --apigeeAuthenticationBaseUrl|	Apigee Authentication BaseUrl |	Base URL for authentication against Apigee (ex: https://yourcompany.login.apigee.com)
 --apigeeOrganizationName |	Apigee Organization Name |	Name of the Apigee organization that the API Proxy is hosted in
@@ -24,11 +25,11 @@ Parameter Name |	Parameter Description|Notes|
 --apimUrl| APIM URL| URL of the target Azure APIM instance
 --apimName|	APIM Name |	Name of the target Azure APIM instance
 --apimResourceGroup|	Resource Group Name |	Name of the Resource Group that Azure APIM is deployed in
---apimOauthConfigName|	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional parameter, provide empty string if not used)</code>
---apimOauthBackendAppId| Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional parameter, provide empty string if not used)</code>
---apimOauthTenantId| Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional parameter, provide empty string if not used)</code>
+--apimOauthConfigName|	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional)</code>
+--apimOauthBackendAppId| Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional)</code>
+--apimOauthTenantId| Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional)</code>
 --apigeeEnvironmentName|	Apigee environment Name |	Name of the Apigee environment the proxy is being migrated from
---keyVaultName|	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional parameter, don't provide if not used)</code>
+--keyVaultName|	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional)</code>
 
 ## Entity Mapping
 
