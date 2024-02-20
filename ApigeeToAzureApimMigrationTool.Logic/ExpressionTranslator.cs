@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ApigeeToAzureApimMigrationTool.Service
@@ -15,14 +16,23 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _translationTable = CreateTranslationTable();
         }
 
-        public string Translate(string expression)
+        public string TranslateWholeString(string expression)
         {
             foreach (var item in _translationTable)
-            {
                 expression = expression.Replace(item.Key, item.Value);
-            }
 
             return expression;
+        }
+
+        public bool ContentHasVariablesInIt(string content)
+        {
+            const string apigeeVariable = @"{(.*?)}";
+            return Regex.Matches(content, apigeeVariable).Any();
+        }
+
+        public string TranslateSingleItem(string expression)
+        {
+            return _translationTable.ContainsKey(expression) ? _translationTable[expression] : expression;
         }
 
         private Dictionary<string, string> CreateTranslationTable()
