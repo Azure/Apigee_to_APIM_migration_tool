@@ -15,19 +15,21 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         private readonly IApigeeManagementApiService _apigeeService;
         private readonly IApimProvider _apimProvider;
         private readonly IBundleProvider _bundleProvider;
-        public PolicyTransformationFactory(IApigeeManagementApiService apigeeService, IApimProvider apimProvider, IBundleProvider bundleProvider, IApigeeXmlLoader apigeeXmlLoader)
+        private readonly IExpressionTranslator _expressionTranslator;
+        public PolicyTransformationFactory(IApigeeManagementApiService apigeeService, IApimProvider apimProvider, IBundleProvider bundleProvider, IApigeeXmlLoader apigeeXmlLoader, IExpressionTranslator expressionTranslator)
         {
             _apigeeService = apigeeService;
             _apimProvider = apimProvider;
             _apigeeXmlLoader = apigeeXmlLoader;
             _bundleProvider = bundleProvider;
+            _expressionTranslator = expressionTranslator;
         }
         public IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables)
         {
             switch (policyName)
             {
                 case "AssignMessage":
-                    return new AssignMessageTransformation();
+                    return new AssignMessageTransformation(_expressionTranslator);
                 case "LookupCache":
                     return new LookupCacheTransformation(policyVariables);
                 case "KeyValueMapOperations":
