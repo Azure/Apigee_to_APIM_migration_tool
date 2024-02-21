@@ -92,7 +92,6 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             // Check if the body content has variables in it
             if (_expressionTranslator.ContentHasVariablesInIt(value))
             {
-                // If the content type is JSON, remove the enclosing double quotes
                 if (contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase))
                     value = value.Substring(1, value.Length - 2);
 
@@ -108,7 +107,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                         var translatedExpression = _expressionTranslator.TranslateSingleItem(match.Groups[1].Value);
 
                         // Create the corresponding Azure API Management liquid variable
-                        var apimLiquidVariable = "{{" + translatedExpression + "}}";
+                        var apimLiquidVariable = "{{" + $"context.Variables[\"{translatedExpression}\"]" + "}}";
 
                         // Replace the Apigee variable with the Azure API Management liquid variable in the body content
                         value.Replace(match.Groups[0].Value, apimLiquidVariable);
