@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ApigeeToAzureApimMigrationTool.Core.Interface;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,7 +8,9 @@ using System.Threading.Tasks;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
-    public class ExpressionTranslator
+
+
+    public class ExpressionTranslator : IExpressionTranslator
     {
         private readonly Dictionary<string, string> _translationTable;
 
@@ -16,6 +19,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _translationTable = CreateTranslationTable();
         }
 
+        /// <summary>
+        /// Translates the whole string by replacing the keys in the translation table with their corresponding values.
+        /// </summary>
+        /// <param name="expression">The input expression to be translated.</param>
+        /// <returns>The translated expression.</returns>
         public string TranslateWholeString(string expression)
         {
             foreach (var item in _translationTable)
@@ -24,17 +32,31 @@ namespace ApigeeToAzureApimMigrationTool.Service
             return expression;
         }
 
+        /// <summary>
+        /// Checks if the content has variables in it by using a regular expression pattern.
+        /// </summary>
+        /// <param name="content">The input content to be checked.</param>
+        /// <returns>True if the content has variables, otherwise false.</returns>
         public bool ContentHasVariablesInIt(string content)
         {
             const string apigeeVariable = @"{(.*?)}";
             return Regex.Matches(content, apigeeVariable).Any();
         }
 
+        /// <summary>
+        /// Translates a single item by looking up its value in the translation table.
+        /// </summary>
+        /// <param name="expression">The input expression to be translated.</param>
+        /// <returns>The translated expression if found in the translation table, otherwise the original expression.</returns>
         public string TranslateSingleItem(string expression)
         {
             return _translationTable.ContainsKey(expression) ? _translationTable[expression] : expression;
         }
 
+        /// <summary>
+        /// Creates the translation table with the predefined key-value pairs.
+        /// </summary>
+        /// <returns>The translation table.</returns>
         private Dictionary<string, string> CreateTranslationTable()
         {
             var expressionList = new Dictionary<string, string>();
@@ -49,6 +71,5 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             return expressionList;
         }
-
     }
 }

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -13,6 +14,19 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 {
     public class AssignMessageTransformation : IPolicyTransformation
     {
+        private readonly IExpressionTranslator _expressionTranslator;
+
+        public AssignMessageTransformation(IExpressionTranslator expressionTranslator)
+        {
+            _expressionTranslator = expressionTranslator;
+        }
+
+        /// <summary>
+        /// Transforms the Apigee policy element into a collection of Azure API Management policies.
+        /// </summary>
+        /// <param name="apigeePolicyElement">The Apigee policy element to transform.</param>
+        /// <param name="apigeePolicyName">The name of the Apigee policy.</param>
+        /// <returns>A task that represents the asynchronous transformation operation. The task result contains the collection of transformed Azure API Management policies.</returns>
         public Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName)
         {
             var apimPolicies = new List<XElement>();
@@ -33,7 +47,6 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 }
             }
 
-
             if (apigeePolicyElement.Element("Remove")?.Element("Headers") != null)
             {
                 foreach (var header in apigeePolicyElement.Element("Remove").Element("Headers").Elements("Header"))
@@ -46,7 +59,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             {
                 var (setBodyPolicy, contentType) = SetBody(apigeePolicyElement.Element("Set").Element("Payload"));
                 apimPolicies.Add(setBodyPolicy);
-                if(contentType != null)
+                if (contentType != null)
                 {
                     apimPolicies.Add(new XElement("set-header", new XAttribute("name", "Content-Type"), new XAttribute("exists-action", "override"), new XElement("value", contentType)));
                 }
@@ -58,39 +71,64 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             }
 
             return Task.FromResult(apimPolicies.AsEnumerable());
-
         }
 
-        private (XElement,string?) SetBody(XElement body)
+        /// <summary>
+        /// Sets the body of the policy and returns the transformed policy element along with the content type.
+        /// </summary>
+        /// <param name="body">The body element of the policy.</param>
+        /// <returns>A tuple containing the transformed policy element and the content type.</returns>
+        private (XElement, string?) SetBody(XElement body)
         {
+            // Get the content type attribute value from the body element
             string? contentType = body.Attribute("contentType")?.Value;
-            var value = body.Value.Trim();
-            var newPolicy = new XElement("set-body");
-            var expressionTranslator = new ExpressionTranslator();
 
-            if (expressionTranslator.ContentHasVariablesInIt(value))
+            // Get the value of the body element and trim any leading or trailing whitespace
+            var value = body.Value.Trim();
+
+            // Create a new policy element for setting the body
+            var newPolicy = new XElement("set-body");
+
+            // Check if the body content has variables in it
+            if (_expressionTranslator.ContentHasVariablesInIt(value))
             {
-                newPolicy.Add(new XAttribute("template", "liquid"));
+                // If the content type is JSON, remove the enclosing double quotes
                 if (contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase))
                     value = value.Substring(1, value.Length - 2);
 
+                // Define a regular expression pattern to match Apigee variables in the body content
                 const string apigeeVariablePattern = @"{(.*?)}";
+
+                // Iterate through all matches of the pattern in the body content
                 foreach (Match match in Regex.Matches(value, apigeeVariablePattern))
                 {
                     if (match.Success && match.Groups.Count > 0)
                     {
-                        var translatedExpression = expressionTranslator.TranslateSingleItem(match.Groups[1].Value);
+                        // Translate the Apigee variable expression to Azure API Management liquid syntax
+                        var translatedExpression = _expressionTranslator.TranslateSingleItem(match.Groups[1].Value);
+
+                        // Create the corresponding Azure API Management liquid variable
                         var apimLiquidVariable = "{{" + translatedExpression + "}}";
+
+                        // Replace the Apigee variable with the Azure API Management liquid variable in the body content
                         value.Replace(match.Groups[0].Value, apimLiquidVariable);
                     }
                 }
-
             }
 
+            // Set the value of the new policy element to the transformed body content
             newPolicy.Value = value;
+
+            // Return the transformed policy element and the content type as a tuple
             return (newPolicy, contentType);
         }
 
+        /// <summary>
+        /// Sets the header of the policy based on the specified operation.
+        /// </summary>
+        /// <param name="header">The header element of the policy.</param>
+        /// <param name="operation">The operation to perform on the header.</param>
+        /// <returns>The transformed policy element representing the header.</returns>
         private XElement SetHeader(XElement header, AssignMessagePolicyOperations operation)
         {
             var name = header.Attribute("name")?.Value;
@@ -98,8 +136,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             if (value.StartsWith('{'))
             {
                 value = value.Replace("{", "").Replace("}", "");
-                var expressionTranslator = new ExpressionTranslator();
-                value = expressionTranslator.TranslateWholeString(value);
+                value = _expressionTranslator.TranslateWholeString(value);
                 value = WebUtility.HtmlDecode($"@({value})");
             }
 
@@ -111,6 +148,11 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "override"), new XElement("value", value));
         }
 
+        /// <summary>
+        /// Sets the variable of the policy.
+        /// </summary>
+        /// <param name="assignMessageElement">The AssignVariable element of the policy.</param>
+        /// <returns>The transformed policy element representing the variable.</returns>
         private XElement SetVariable(XElement assignMessageElement)
         {
             var assignVariable = assignMessageElement.Element("AssignVariable");
@@ -134,18 +176,17 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 throw new Exception("Having both Ref and Template elements in AssignVariable is not supported.");
             }
 
-            var expressionTranslator = new ExpressionTranslator();
             var finalValue = string.Empty;
 
             if (refValue != null)
             {
-                refValue = expressionTranslator.TranslateWholeString(refValue);
+                refValue = _expressionTranslator.TranslateWholeString(refValue);
                 finalValue = refValue;
             }
             if (template != null)
             {
                 template = template.Trim();
-                template = expressionTranslator.TranslateWholeString(template);
+                template = _expressionTranslator.TranslateWholeString(template);
                 var apimTemplateBuilder = new StringBuilder();
                 for (int i = 0; i < template.Length; i++)
                 {
@@ -185,6 +226,5 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             newPolicy = new XElement("set-variable", new XAttribute("name", name), new XAttribute("value", $"@({finalValue})"));
             return newPolicy;
         }
-
     }
 }

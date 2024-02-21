@@ -18,9 +18,9 @@ namespace ApigeeToApimMigrationTool.Test
         // with the real loaders, only we'll be loading from the filesystem instead 
         // of from the Apigee API.
 
-        private AzureApimService _azureApimServiceUnderTest;
-        private IBundleProvider _bundleProvider;
-        private MockApimProvider _apimProvider;
+        private readonly AzureApimService _azureApimServiceUnderTest;
+        private readonly IBundleProvider _bundleProvider;
+        private readonly MockApimProvider _apimProvider;
         public BundleLoaderTests()
         {
             var testConfigPath = "TestBundles";
@@ -29,8 +29,9 @@ namespace ApigeeToApimMigrationTool.Test
             _apimProvider = new MockApimProvider();
 
             IApigeeXmlLoader apigeeXmlLoader = new ApigeeXmlFileLoader(_bundleProvider);
+            IExpressionTranslator expressionTranslator = new ExpressionTranslator();
             IApigeeManagementApiService apigeeManagementApiService = new ApigeeManagementApiTestFileService(_bundleProvider, apigeeXmlLoader, testConfigPath);
-            IPolicyTransformationFactory policyTransformationFactory = new PolicyTransformationFactory(apigeeManagementApiService, _apimProvider, _bundleProvider, apigeeXmlLoader);
+            IPolicyTransformationFactory policyTransformationFactory = new PolicyTransformationFactory(apigeeManagementApiService, _apimProvider, _bundleProvider, apigeeXmlLoader, expressionTranslator);
 
             _azureApimServiceUnderTest = new AzureApimService(
                 apigeeXmlLoader: apigeeXmlLoader,

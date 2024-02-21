@@ -216,6 +216,7 @@ async Task RunMigration(ApigeeConfiguration apigeeConfiguration, EntraConfigurat
 
     builder.Services.AddSingleton<IPolicyTransformationFactory, PolicyTransformationFactory>();
     builder.Services.AddSingleton<IApimPolicyTransformer, ApigeeToApimPolicyTransformer>();
+    builder.Services.AddSingleton<IExpressionTranslator, ExpressionTranslator>();
 
     using IHost host = builder.Build();
 

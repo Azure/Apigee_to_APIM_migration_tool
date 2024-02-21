@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Service.Transformations;
+﻿using ApigeeToAzureApimMigrationTool.Service;
+using ApigeeToAzureApimMigrationTool.Service.Transformations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,7 +26,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Add-Header-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -52,7 +53,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Set-Header-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -80,7 +81,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Remove-Header-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -107,7 +108,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Set-Body-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -132,7 +133,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Assign-Variable-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -158,7 +159,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Assign-Variable-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -185,7 +186,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Assign-Variable-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
@@ -213,7 +214,7 @@ namespace ApigeeToApimMigrationTool.Test.TransformationTests
 
             var apigeePolicyName = "Assign-Variable-1";
 
-            var sut = new AssignMessageTransformation();
+            var sut = new AssignMessageTransformation(new ExpressionTranslator());
 
             // Act
             var result = await sut.Transform(apigeePolicyElement, apigeePolicyName);
