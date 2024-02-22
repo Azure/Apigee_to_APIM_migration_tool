@@ -251,7 +251,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             //Thread.Sleep(5000);
         }
 
-        public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value)
+        public async Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, int index = 1)
         {
             if (_resourceGroup == null)
             {
@@ -261,7 +261,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
             ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
             ApiManagementNamedValueCollection namedValues = apimResource.GetApiManagementNamedValues();
 
-            string namedValueName = $"{mapIdentifier}-{keyName}";
+            string namedValueName = $"{mapIdentifier}-{keyName}-{index}";
+            namedValueName = namedValueName.Replace("_", "-");
+
             var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
             {
                 DisplayName = namedValueName,
