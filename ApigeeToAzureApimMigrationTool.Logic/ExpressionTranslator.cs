@@ -63,6 +63,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
             expressionList.Add("request.verb", "context.Operation.Method");
             expressionList.Add("request.header.origin", "context.Request.Headers.GetValueOrDefault(\"origin\")");
             expressionList.Add("request.header.Access-Control-Request-Method", "context.Request.Headers.GetValueOrDefault(\"Access-Control-Request-Method\")");
+
+            return expressionList;
+        }
+
+        /// <summary>
+        /// Creates the translation table for conditions with the predefined key-value pairs.
+        /// </summary>
+        /// <returns>The translation table for conditions.</returns>
+        private Dictionary<string, string> CreateTranslationTableForConditions()
+        {
+            var expressionList = new Dictionary<string, string>();
             expressionList.Add(" AND ", " && ");
             expressionList.Add(" and ", " && ");
             expressionList.Add(" or ", " || ");
