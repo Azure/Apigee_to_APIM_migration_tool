@@ -80,36 +80,31 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         /// <returns>A tuple containing the transformed policy element and the content type.</returns>
         private (XElement, string?) SetBody(XElement body)
         {
-            // Get the content type attribute value from the body element
             string? contentType = body.Attribute("contentType")?.Value;
 
-            // Get the value of the body element and trim any leading or trailing whitespace
             var value = body.Value.Trim();
 
-            // Create a new policy element for setting the body
             var newPolicy = new XElement("set-body");
 
-            // Check if the body content has variables in it
             if (_expressionTranslator.ContentHasVariablesInIt(value))
             {
                 if (contentType.Equals("application/json", StringComparison.OrdinalIgnoreCase))
                     value = value.Substring(1, value.Length - 2);
 
-                // Define a regular expression pattern to match Apigee variables in the body content
                 const string apigeeVariablePattern = @"{(.*?)}";
 
-                // Iterate through all matches of the pattern in the body content
                 foreach (Match match in Regex.Matches(value, apigeeVariablePattern))
                 {
                     if (match.Success && match.Groups.Count > 0)
                     {
-                        // Translate the Apigee variable expression to Azure API Management liquid syntax
                         var translatedExpression = _expressionTranslator.TranslateSingleItem(match.Groups[1].Value);
 
-                        // Create the corresponding Azure API Management liquid variable
-                        var apimLiquidVariable = "{{" + $"context.Variables[\"{translatedExpression}\"]" + "}}";
+                        string? apimLiquidVariable = default;
+                        if (translatedExpression == match.Groups[1].Value)
+                             apimLiquidVariable = "{{" + $"context.Variables[\"{translatedExpression}\"]" + "}}";
+                        else
+                            apimLiquidVariable =  translatedExpression;
 
-                        // Replace the Apigee variable with the Azure API Management liquid variable in the body content
                         value.Replace(match.Groups[0].Value, apimLiquidVariable);
                     }
                 }
@@ -132,19 +127,29 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         {
             var name = header.Attribute("name")?.Value;
             var value = header.Value;
-            if (value.StartsWith('{'))
+
+            const string apigeeVariablePattern = @"{(.*?)}";
+
+            // Iterate through all matches of the pattern in the body content
+            foreach (Match match in Regex.Matches(value, apigeeVariablePattern))
             {
-                value = value.Replace("{", "").Replace("}", "");
-                value = _expressionTranslator.TranslateWholeString(value);
-                value = WebUtility.HtmlDecode($"@({value})");
+                if (match.Success && match.Groups.Count > 0)
+                {
+                    // Translate the Apigee variable expression to Azure API Management liquid syntax
+                    var translatedExpression = _expressionTranslator.TranslateSingleItem(match.Groups[1].Value);
+                    if (translatedExpression == match.Groups[1].Value)
+                    {
+                        value = value.Replace(match.Groups[0].Value, $"@(context.Variables.GetValueOrDefault<string>(\"{translatedExpression}\"))");
+                    }
+                }
             }
 
             if (operation == AssignMessagePolicyOperations.Add)
-                return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "skip"), new XElement("value", value));
+                return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "skip"), new XElement("value", WebUtility.HtmlDecode(value)));
             else if (operation == AssignMessagePolicyOperations.Remove)
                 return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "delete"));
             else
-                return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "override"), new XElement("value", value));
+                return new XElement("set-header", new XAttribute("name", name), new XAttribute("exists-action", "override"), new XElement("value", WebUtility.HtmlDecode(value)));
         }
 
         /// <summary>
