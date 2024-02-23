@@ -66,17 +66,17 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             if (getElements != null)
                 foreach (var getElement in getElements)
                 {
-                    // assignTo not yet supported
-                    var assignTo = getElement.Attribute("assignTo");
-                    if (assignTo != null)
-                    {
-                        Console.WriteLine("WARNING: assignTo is not supported for Key Value Maps.");
-                        return new List<XElement>();
-                    }
                     var index = getElement.Attribute("index").Value;
-                    var key = getElement.Element("Key").Element("Parameter").Value;
-                    var variableName = getElement.Attribute("assignTo").Value;
+                    string key = string.Empty;
+                    //ref attribute is not supported in APIM as it's not possible to construct the name of the named value in run time.
+                    //Alternative could be a logic apps or function app to read the named value 
+                    if (getElement.Element("Key").Element("Parameter").Attribute("ref") != null)
+                        throw new Exception("using the ref attribute to retrieve the name of the parameter in run time is not supported");
+                    else
+                        key = getElement.Element("Key").Element("Parameter").Value;
 
+
+                    var variableName = getElement.Attribute("assignTo").Value;
 
                     var apigeeKeyValueMap = await _apigeeService.GetKeyValueMapByName(proxyName, _apigeeService.Environment, mapIdentifier);
                     if (apigeeKeyValueMap != null)
@@ -88,11 +88,11 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                         for (int i = 0; i < apigeeKeyValueMap.Entry.Count; i++)
                         {
                             var entry = apigeeKeyValueMap.Entry.ElementAt(i);
-                            await _apimProvider.AddNamedValue(apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, entry.Value, i+1);
+                            await _apimProvider.AddNamedValue(apimName, proxyName, mapIdentifier, key, apigeeKeyValueMap.Encrypted, entry.Value, i + 1);
                         }
                     }
 
-                    string namedValueName = $"{mapIdentifier}-{key}-{index}"; 
+                    string namedValueName = $"{mapIdentifier}-{key}-{index}";
                     namedValueName = namedValueName.Replace("_", "-");
 
                     var policy = new XElement("set-variable", new XAttribute("name", variableName), new XAttribute("value", "{{" + namedValueName + "}}"));
