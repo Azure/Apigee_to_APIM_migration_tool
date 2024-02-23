@@ -48,14 +48,14 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         }
 
         /// <summary>
-        /// Sets the variable values based on the Apigee element.
+        /// Sets the variable values based on the Apigee element.Only Get operation is supported by APIM. Put and Delete are not supported.
         /// </summary>
         /// <param name="element">The Apigee element to process.</param>
         /// <param name="proxyName">The name of the proxy.</param>
         /// <param name="apimName">The name of the Azure API Management instance.</param>
         /// <param name="policyName">The name of the policy.</param>
         /// <returns>A collection of Azure API Management policies as XElement objects.</returns>
-        /// only Get operation is supported by APIM. Put and Delete is not supported.
+        /// only Get operation is supported by APIM. Put and Delete are not supported.
         private async Task<IEnumerable<XElement>> SetVariable(XElement element, string proxyName, string apimName, string policyName)
         {
             XDocument setVariablePolicies = new XDocument();
