@@ -27,7 +27,17 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         /// <param name="apigeePolicyElement">The Apigee policy element to transform.</param>
         /// <param name="apigeePolicyName">The name of the Apigee policy.</param>
         /// <returns>A task that represents the asynchronous transformation operation. The task result contains the collection of transformed Azure API Management policies.</returns>
-        public Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName)
+        public virtual Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName)
+        {
+            return Task.FromResult(BuildApimPolicyCollection(apigeePolicyElement).AsEnumerable());
+        }
+
+        /// <summary>
+        /// Transforms the Apigee policy element into a collection of Azure API Management policies.
+        /// </summary>
+        /// <param name="apigeePolicyElement">The Apigee policy element to transform.</param>
+        /// <returns>A collection of transformed Azure API Management policies.</returns>
+        internal IEnumerable<XElement> BuildApimPolicyCollection(XElement apigeePolicyElement)
         {
             var apimPolicies = new List<XElement>();
 
@@ -70,7 +80,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 apimPolicies.Add(SetVariable(apigeePolicyElement));
             }
 
-            return Task.FromResult(apimPolicies.AsEnumerable());
+            return apimPolicies;
         }
 
         /// <summary>

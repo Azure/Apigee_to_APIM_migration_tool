@@ -9,6 +9,6 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IPolicyTransformation
     {
-        public Task<IEnumerable<XElement>> Transform(XElement apigeePolicy, string apigeePolicyName);
+        public Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName);
     }
 }
