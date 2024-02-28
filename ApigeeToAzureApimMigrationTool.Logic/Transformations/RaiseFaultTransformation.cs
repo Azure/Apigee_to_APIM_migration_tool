@@ -17,6 +17,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 
         public Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName)
         {
+            var policyList = new List<XElement>();
             var returnResponsePolicy = new XElement("return-response");
             var apimPolicies = BuildApimPolicyCollection(apigeePolicyElement.Element("FaultResponse")).ToList();
             string statusCode = "500";
@@ -32,14 +33,13 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 
             apimPolicies.Add(new XElement("set-status", new XAttribute("code", statusCode), new XAttribute("reason", reasonPhrase)));
 
-            var newPolicy = new XElement("return-response");
-
             foreach(var policy in apimPolicies)
             {
-                newPolicy.Add(policy);
+                returnResponsePolicy.Add(policy);
             }
 
-
+            policyList.Add(returnResponsePolicy);
+            return Task.FromResult<IEnumerable<XElement>>(policyList);
 
         }
     }
