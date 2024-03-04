@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Core.Interface;
+﻿using ApigeeToAzureApimMigrationTool.Core.Enum;
+using ApigeeToAzureApimMigrationTool.Core.Interface;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +11,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 {
     public class NullTransformation : IPolicyTransformation
     {
-        public Task<IEnumerable<XElement>> Transform(XElement element, string apigeePolicyName)
+        public Task<IEnumerable<XElement>> Transform(XElement element, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound)
         {
             // Return empty list
             return Task.FromResult(new List<XElement>().AsEnumerable());

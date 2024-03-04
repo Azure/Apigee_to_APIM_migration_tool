@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ApigeeToAzureApimMigrationTool.Core.Enum;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,6 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IPolicyTransformation
     {
-        public Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName);
+        Task<IEnumerable<XElement>> Transform(XElement element, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound);
     }
 }

@@ -1,4 +1,4 @@
-﻿using ApigeeToAzureApimMigrationTool.Core.Enum;
+using ApigeeToAzureApimMigrationTool.Core.Enum;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using System;
 using System.Collections.Generic;
@@ -27,7 +27,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         /// <param name="apigeePolicyElement">The Apigee policy element to transform.</param>
         /// <param name="apigeePolicyName">The name of the Apigee policy.</param>
         /// <returns>A task that represents the asynchronous transformation operation. The task result contains the collection of transformed Azure API Management policies.</returns>
-        public virtual Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName)
+
+        public virtual Task<IEnumerable<XElement>> Transform(XElement apigeePolicyElement, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound)
         {
             return Task.FromResult(BuildApimPolicyCollection(apigeePolicyElement).AsEnumerable());
         }

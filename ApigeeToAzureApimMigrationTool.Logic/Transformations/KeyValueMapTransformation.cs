@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Core;
+using ApigeeToAzureApimMigrationTool.Core;
+using ApigeeToAzureApimMigrationTool.Core.Enum;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using System;
 using System.Collections.Generic;
@@ -37,7 +38,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         /// <param name="apigeeElement">The Apigee element to transform.</param>
         /// <param name="apigeePolicyName">The name of the Apigee policy.</param>
         /// <returns>A collection of Azure API Management policies as XElement objects.</returns>
-        public async Task<IEnumerable<XElement>> Transform(XElement apigeeElement, string apigeePolicyName)
+        public async Task<IEnumerable<XElement>> Transform(XElement apigeeElement, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound)
         {
             var apimPolicies = new List<XElement>();
 
