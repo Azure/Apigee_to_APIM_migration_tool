@@ -20,7 +20,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
         Task CreateOrUpdateOperation(string apiName, string description, string httpVerb);
         Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath);
         Task AddApiToProduct(string apiId);
-        Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value);
+        Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, int index = 1);
 
     }
 }
