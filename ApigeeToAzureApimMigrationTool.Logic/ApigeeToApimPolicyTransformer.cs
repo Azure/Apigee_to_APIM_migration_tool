@@ -88,7 +88,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             if (!string.IsNullOrEmpty(condition))
             {
                 ExpressionTranslator expressionTranslator = new ExpressionTranslator();
-                condition = expressionTranslator.Translate(condition);
+                condition = expressionTranslator.TranslateWholeString(condition);
 
                 string cacheLookupPattern = @"lookupcache.(.*?).cachehit";
                 foreach (Match match in Regex.Matches(condition, cacheLookupPattern))

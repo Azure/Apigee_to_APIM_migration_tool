@@ -14,10 +14,11 @@ namespace ApigeeToApimMigrationTool.Test
         private IAzureApimService _azureApimServiceUnderTest;
 
         // Dependencies
-        private MockApigeeManagementApiService _mockApigeeManagementApiService;
-        private MockApigeeXmlLoader _mockApigeeXmlLoader;
-        private MockApimProvider _mockApimProvider;
-        private MockBundleProvider _mockBundleProvider;
+        private readonly MockApigeeManagementApiService _mockApigeeManagementApiService;
+        private readonly MockApigeeXmlLoader _mockApigeeXmlLoader;
+        private readonly MockApimProvider _mockApimProvider;
+        private readonly MockBundleProvider _mockBundleProvider;
+        private readonly IExpressionTranslator _expressionTranslator;
 
         public AzureApimServiceTest()
         {
@@ -25,11 +26,12 @@ namespace ApigeeToApimMigrationTool.Test
             _mockApigeeXmlLoader = new MockApigeeXmlLoader();
             _mockApimProvider = new MockApimProvider();
             _mockBundleProvider = new MockBundleProvider();
+            _expressionTranslator = new ExpressionTranslator();
 
             // We need a real transformation factory and transformer here because we are testing the integration between the service
             // and the transformer
             var policyTransformationFactory = new PolicyTransformationFactory(
-                _mockApigeeManagementApiService, _mockApimProvider, _mockBundleProvider, _mockApigeeXmlLoader);
+                _mockApigeeManagementApiService, _mockApimProvider, _mockBundleProvider, _mockApigeeXmlLoader, _expressionTranslator);
 
             var policyTransformer = new ApigeeToApimPolicyTransformer(policyTransformationFactory);
 

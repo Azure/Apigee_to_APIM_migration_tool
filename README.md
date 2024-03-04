@@ -1,7 +1,7 @@
 # Project
 
 Apigee to Azure APIM Migration Tool is a cross platform application developed with C# and .Net 7. This application can run on any operating system.
-The main purpose of this application is to migrate Apigee API Products, API Proxies and their policies to Azure APIM. It does that by reading metadata from Apigee using its management API, transforming entities and creating them in Azure APIM using .Net SDK and REST API. 
+The main purpose of this application is to migrate Apigee API Products, API Proxies and their policies to Azure APIM. It does that by reading metadata from Apigee using its management API, transforming entities and creating them in Azure APIM using .Net SDK and REST API. You can view our upcoming plans and features in our [public roadmap](./Roadmap.md).
 
 ![image](https://github.com/Azure/Apigee_to_APIM_migration_tool/assets/106823811/8df21f97-503a-4af0-97ae-9f7675dcc8c8)
 
