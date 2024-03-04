@@ -22,7 +22,7 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.CompletedTask;
         }
 
-        public Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value)
+        public Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, int index)
         {
             return Task.CompletedTask;
         }
