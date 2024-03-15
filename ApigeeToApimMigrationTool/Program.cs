@@ -99,6 +99,18 @@ var apimOauthTenantIdOption = new Option<string>(
     name: "--apimOauthTenantId",
     description: "Azure AD tenant ID (optional)");
 
+var apimOauthAudienceOption = new Option<string>(
+    name: "--apimOauthAudiences",
+    description: "Comma seperated list of OAuth audiences (optional)");
+
+var apimOauthIssuersOption = new Option<string>(
+    name: "--apimOauthIssuers",
+    description: "Comma seperated list of OAuth issuers (optional)");
+
+var apimOauthScopeClaimNameOption = new Option<string>(
+    name: "--apimOauthIssuers",
+    description: "Name of OAuth scope clam name. Default is \"scope\" (optional)");
+
 // Other Azure Options
 var keyVaultNameOption = new Option<string>(
     name: "--keyVaultName",
