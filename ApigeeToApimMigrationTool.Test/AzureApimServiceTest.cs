@@ -1,3 +1,4 @@
+using ApigeeToApimMigrationTool.Core.Config;
 using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Dto;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
@@ -69,9 +70,9 @@ namespace ApigeeToApimMigrationTool.Test
 
             await _azureApimServiceUnderTest.ImportApi(
                 apimName: "testApi", 
-                proxyName: "Test-Api", 
-                oauthConfigName: string.Empty, 
-                environment: string.Empty, 
+                proxyName: "Test-Api",
+                apimConfiguration: new ApimConfiguration(),
+                apigeeConfiguration: new ApigeeConfiguration(), 
                 keyVaultName: string.Empty);
 
             var policy = _mockApimProvider.PolicyXml;

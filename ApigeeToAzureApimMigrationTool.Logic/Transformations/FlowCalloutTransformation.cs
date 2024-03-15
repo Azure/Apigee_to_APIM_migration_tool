@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Core;
+﻿using ApigeeToApimMigrationTool.Core.Config;
+using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Enum;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using System;
@@ -17,15 +18,19 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         private readonly IApimProvider _apimProvider;
         private readonly IApigeeManagementApiService _apiService;
         private readonly IBundleProvider _bundleProvider;
+        private ApimConfiguration _apimConfiguration;
+        private ApigeeConfiguration _apigeeConfiguration;
 
         private string _sharedFlowName;
 
-        public FlowCalloutTransformation(IApigeeXmlLoader apigeeXmlLoader, IApimProvider apimProvider, IBundleProvider bundleProvider, IApigeeManagementApiService apiService)
+        public FlowCalloutTransformation(IApigeeXmlLoader apigeeXmlLoader, IApimProvider apimProvider, IBundleProvider bundleProvider, IApigeeManagementApiService apiService, ApimConfiguration apimConfiguration, ApigeeConfiguration apigeeConfiguration)
         {
             _apigeeXmlLoader = apigeeXmlLoader;
             _apimProvider = apimProvider;
             _apiService = apiService;
             _bundleProvider = bundleProvider;
+            _apimConfiguration = apimConfiguration;
+            _apigeeConfiguration = apigeeConfiguration;
         }
 
         public async Task<IEnumerable<XElement>> Transform(XElement element, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound)
@@ -68,7 +73,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 var sharedFlowRootElement = sharedFlowXml.Element("SharedFlow");
                 var steps = sharedFlowRootElement.Elements("Step");
 
-                await apimPolicyTransformer.TransformPoliciesInCollection(steps, rawPolicyFragment.Root, _apigeeXmlLoader.LoadSharedFlowPolicyXml, apimName, sharedFlowName);
+                await apimPolicyTransformer.TransformPoliciesInCollection(steps, rawPolicyFragment.Root, _apigeeXmlLoader.LoadSharedFlowPolicyXml, apimName, sharedFlowName, _apigeeConfiguration, _apimConfiguration);
                 await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ApigeeToApimMigrationTool.Core.Config;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -9,6 +10,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IApimPolicyTransformer
     {
-        public Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader, string apimName, string policyName);
+        Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader,
+            string apimName, string proxyName, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig);
     }
 }

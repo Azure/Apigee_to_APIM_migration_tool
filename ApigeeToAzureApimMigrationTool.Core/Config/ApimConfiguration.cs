@@ -14,5 +14,8 @@ namespace ApigeeToApimMigrationTool.Core.Config
         public string? OAuthConfigName { get; set; }
         public string? OAuthBackendAppId { get; set; }
         public string? OAuthTenantId { get; set; }
+        public string? OAuthAudiences { get; set; }
+        public string? OAuthIssuers { get; set; }
+        public string? OAuthScopeClaimName { get; set; }
     }
 }

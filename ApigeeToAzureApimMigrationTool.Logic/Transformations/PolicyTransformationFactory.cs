@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Core;
+﻿using ApigeeToApimMigrationTool.Core.Config;
+using ApigeeToAzureApimMigrationTool.Core;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             _bundleProvider = bundleProvider;
             _expressionTranslator = expressionTranslator;
         }
-        public IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables)
+        public IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
         {
             switch (policyName)
             {
@@ -41,11 +42,11 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 case "ExtractVariables":
                     return new ExtractVariablesTransformation(policyVariables);
                 case "OAuthV2":
-                    return new OAuthV2Transformation();
+                    return new OAuthV2Transformation(apimConfig);
                 case "PopulateCache":
                     return new PopulateCacheTransformation(policyVariables);
                 case "FlowCallout":
-                    return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _bundleProvider, _apigeeService);
+                    return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _bundleProvider, _apigeeService, apimConfig, apigeeConfiguration);
                 default:
                     return new NullTransformation();
 

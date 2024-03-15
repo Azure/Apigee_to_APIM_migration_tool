@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ApigeeToApimMigrationTool.Core.Config;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,6 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
 {
     public interface IPolicyTransformationFactory
     {
-        IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables);
+        IPolicyTransformation GetTransformationForPolicy(string policyName, IList<KeyValuePair<string, string>> policyVariables, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig);
     }
 }
