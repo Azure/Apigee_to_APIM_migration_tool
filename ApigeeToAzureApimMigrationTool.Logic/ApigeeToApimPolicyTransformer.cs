@@ -1,4 +1,5 @@
-﻿using ApigeeToAzureApimMigrationTool.Core.Interface;
+﻿using ApigeeToApimMigrationTool.Core.Config;
+using ApigeeToAzureApimMigrationTool.Core.Interface;
 using ApigeeToAzureApimMigrationTool.Service.Transformations;
 using System;
 using System.Collections.Generic;
@@ -22,7 +23,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
             _policyTransformationFactory = policyTransformationFactory;
             _policyVariables = new List<KeyValuePair<string, string>>();
         }
-        public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader, string apimName, string proxyName)
+        public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader,
+            string apimName, string proxyName, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
         {
             if (elements == null)
             {
@@ -59,14 +61,15 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     throw new Exception($"Cannot find root element in policy xml: {policyXml}");
                 }
 
-                await TransformPolicy(rootElement, rootElement.Name.ToString(), azureApimPolicySection, apimName, condition, policyName);
+                await TransformPolicy(rootElement, rootElement.Name.ToString(), azureApimPolicySection, apimName, condition, policyName, apigeeConfiguration, apimConfig);
             }
 
         }
 
-        private async Task TransformPolicy(XElement element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName)
+        private async Task TransformPolicy(XElement element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName,
+            ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
         {
-            var policyTransformation = _policyTransformationFactory.GetTransformationForPolicy(apigeePolicyName, _policyVariables);
+            var policyTransformation = _policyTransformationFactory.GetTransformationForPolicy(apigeePolicyName, _policyVariables, apigeeConfiguration, apimConfig);
             var apimPolicies = await policyTransformation.Transform(element, apigeePolicyDisplayName);
             foreach (var apimPolicy in apimPolicies)
             {

@@ -99,6 +99,18 @@ var apimOauthTenantIdOption = new Option<string>(
     name: "--apimOauthTenantId",
     description: "Azure AD tenant ID (optional)");
 
+var apimOauthAudienceOption = new Option<string>(
+    name: "--apimOauthAudiences",
+    description: "Comma seperated list of OAuth audiences (optional)");
+
+var apimOauthIssuersOption = new Option<string>(
+    name: "--apimOauthIssuers",
+    description: "Comma seperated list of OAuth issuers (optional)");
+
+var apimOauthScopeClaimNameOption = new Option<string>(
+    name: "--apimOauthIssuers",
+    description: "Name of OAuth scope clam name. Default is \"scope\" (optional)");
+
 // Other Azure Options
 var keyVaultNameOption = new Option<string>(
     name: "--keyVaultName",
@@ -138,7 +150,10 @@ var rootCommand = new RootCommand("Apigee to Azure APIM migration tool")
     apimOauthTenantIdOption,
     keyVaultNameOption,
     databaseConnectionStringOption,
-    configFileOption
+    configFileOption,
+    apimOauthAudienceOption,
+    apimOauthIssuersOption,
+    apimOauthScopeClaimNameOption
 };
 
 rootCommand.SetHandler(async (apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString, configFile) =>
@@ -148,7 +163,7 @@ rootCommand.SetHandler(async (apigeeConfig, entraConfig, apimConfig, keyVaultNam
 }, 
 new ApigeeConfigurationBinder(apigeeOrgNameOption, apigeeAuthenticationBaseUrlOption, apigeeManagementApiBaseUrlOption, apigeePasscodeOption, apigeeUsernameOption, apigeePasswordOption, proxyOrProductOption, proxyOrProductNameOption, apigeeEnvironmentNameOption, apigeeConfigDirOption),
 new EntraConfigurationBinder(azureAppIdOption, azurePasswordOption, azureTenantIdOption, azureSubscriptionIdOption), 
-new ApimConfigurationBinder(apimUrlOption, apimNameOption, apimResourceGroupOption, apimOauthConfigNameOption, apimOauthBackendAppIdOption, apimOauthTenantIdOption), 
+new ApimConfigurationBinder(apimUrlOption, apimNameOption, apimResourceGroupOption, apimOauthConfigNameOption, apimOauthBackendAppIdOption, apimOauthTenantIdOption, apimOauthAudienceOption, apimOauthIssuersOption, apimOauthScopeClaimNameOption), 
 keyVaultNameOption, databaseConnectionStringOption, configFileOption);
 
 await rootCommand.InvokeAsync(args);
@@ -285,7 +300,7 @@ async Task MigrateApiProxy(IServiceProvider hostProvider, string proxyOrProductN
     await apiProxyBundle.LoadBundle();
 
     Console.WriteLine($"Migrating API proxy {proxyOrProductName} to Azure APIM");
-    await _azureApimService.ImportApi(apimConfig.Name, proxyOrProductName, apimConfig.OAuthConfigName, apigeeConfiguration.EnvironmentName, keyVaultName);
+    await _azureApimService.ImportApi(apimConfig.Name, proxyOrProductName, apimConfig, apigeeConfiguration, keyVaultName);
 }
 
 
