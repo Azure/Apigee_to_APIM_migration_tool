@@ -45,6 +45,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     return new OAuthV2Transformation(apimConfig);
                 case "PopulateCache":
                     return new PopulateCacheTransformation(policyVariables);
+                case "InvalidateCache":
+                    return new InvalidateCacheTransformation();
                 case "FlowCallout":
                     return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _bundleProvider, _apigeeService, apimConfig, apigeeConfiguration);
                 default:
