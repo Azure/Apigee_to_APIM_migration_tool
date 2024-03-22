@@ -9,7 +9,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
     public interface IExpressionTranslator
     {
         bool ContentHasVariablesInIt(string content);
-        string TranslateSingleItem(string expression);
+        string TranslateSingleItem(string expression, string defaultValue = "");
         string TranslateWholeString(string expression);
     }
 }

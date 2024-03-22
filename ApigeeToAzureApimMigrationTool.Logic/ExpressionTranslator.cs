@@ -47,10 +47,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
         /// Translates a single item by looking up its value in the translation table.
         /// </summary>
         /// <param name="expression">The input expression to be translated.</param>
+        /// <param name="defaultValue">The default value to use in case variable wasn't found.</param>
         /// <returns>The translated expression if found in the translation table, otherwise the original expression.</returns>
-        public string TranslateSingleItem(string expression)
+        public string TranslateSingleItem(string expression, string defaultValue = "")
         {
-            return _translationTable.ContainsKey(expression) ? _translationTable[expression] : expression;
+            return _translationTable.ContainsKey(expression) ? _translationTable[expression] : $"context.Variables.GetValueOrDefault<string>(\"{expression}\",\"{defaultValue}\")";
         }
 
         /// <summary>
