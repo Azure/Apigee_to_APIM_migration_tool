@@ -49,6 +49,10 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     return new InvalidateCacheTransformation();
                 case "FlowCallout":
                     return new FlowCalloutTransformation(_apigeeXmlLoader, _apimProvider, _bundleProvider, _apigeeService, apimConfig, apigeeConfiguration);
+                case "RaiseFault":
+                    return new RaiseFaultTransformation(_expressionTranslator);
+                case "BasicAuthentication":
+                    return new BasicAuthenticationTransformation();
                 case "SpikeArrest":
                     return new SpikeArrestTransformation(_expressionTranslator);
                 default:
