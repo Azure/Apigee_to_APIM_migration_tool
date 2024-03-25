@@ -38,7 +38,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 case "VerifyJWT":
                     return new VerifyJwtTransformation(policyVariables);
                 case "ServiceCallout":
-                    return new ServiceCalloutTransformation(_apigeeService, _apimProvider);
+                    return new ServiceCalloutTransformation(_apigeeService, _apimProvider, _expressionTranslator);
                 case "ExtractVariables":
                     return new ExtractVariablesTransformation(policyVariables);
                 case "OAuthV2":
@@ -53,6 +53,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     return new RaiseFaultTransformation(_expressionTranslator);
                 case "BasicAuthentication":
                     return new BasicAuthenticationTransformation();
+                case "SpikeArrest":
+                    return new SpikeArrestTransformation(_expressionTranslator);
                 default:
                     return new NullTransformation();
 

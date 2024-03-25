@@ -11,15 +11,17 @@ using System.Xml.Linq;
 
 namespace ApigeeToAzureApimMigrationTool.Service.Transformations
 {
-    public class ServiceCalloutTransformation : IPolicyTransformation
+    public class ServiceCalloutTransformation : AssignMessageTransformation, IPolicyTransformation
     {
         private readonly IApigeeManagementApiService _apigeeService;
         private readonly IApimProvider _apimProvider;
+        private readonly IExpressionTranslator _expressionTranslator;
 
-        public ServiceCalloutTransformation(IApigeeManagementApiService apigeeService, IApimProvider apimProvider)
+        public ServiceCalloutTransformation(IApigeeManagementApiService apigeeService, IApimProvider apimProvider, IExpressionTranslator expressionTranslator) : base(expressionTranslator)
         {
             _apigeeService = apigeeService;
             _apimProvider = apimProvider;
+            _expressionTranslator = expressionTranslator;
         }
 
         public async Task<IEnumerable<XElement>> Transform(XElement element, string apigeePolicyName, PolicyDirection policyDirection = PolicyDirection.Inbound)
@@ -37,8 +39,21 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             string requestVariable = element.Element("Request").Attribute("variable").Value;
             string responseVariable = element.Element("Response").Value;
             string continueOnError = element.Attribute("continueOnError").Value;
+            string timeout = element.Element("Timeout")?.Value ?? "60";
 
-            var newPolicy = new XElement("send-request", new XAttribute("mode", $"new"), new XAttribute("response-variable-name", responseVariable), new XAttribute("timeout", "60"), new XAttribute("ignore-error", $"{continueOnError}"));
+            var newPolicy = new XElement("send-request", new XAttribute("mode", $"new"), new XAttribute("response-variable-name", responseVariable),
+                new XAttribute("timeout", timeout), new XAttribute("ignore-error", $"{continueOnError}"));
+
+            
+            var apimPolicies = BuildApimPolicyCollection(element.Element("Request")).ToList();
+
+            foreach (var policy in apimPolicies)
+            {
+                newPolicy.Add(policy);
+            }
+
+            string verb = element.Element("Request")?.Element("Set")?.Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
+            newPolicy.Add(new XElement("set-method", verb));
 
             string url = string.Empty;
             string targetServerName = string.Empty;
@@ -80,33 +95,6 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             }
 
             newPolicy.Add(new XElement("set-url", url));
-
-            string verb = element.Element("Request")?.Element("Set")?.Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
-            newPolicy.Add(new XElement("set-method", verb));
-
-            var headers = element.Element("Request").Element("Set")?.Element("Headers")?.Elements("Header");
-            if (headers != null)
-                foreach (var header in headers)
-                    newPolicy.Add(
-                        (header, false));
-
-            string PayloadContentType = element.Element("Request").Element("Set")?.Element("Payload")?.Attribute("contentType").Value;
-            string PayloadContent = element.Element("Request").Element("Set")?.Element("Payload")?.Value;
-            string variablePattern = @"{(.*?)}";
-            if (!string.IsNullOrEmpty(PayloadContent))
-            {
-                foreach (Match match in Regex.Matches(PayloadContent, variablePattern))
-                {
-                    if (match.Success && match.Groups.Count > 0)
-                    {
-                        PayloadContent = PayloadContent.Replace("{" + match.Groups[1].Value + "}", $"@(context.Variables.GetValueOrDefault(\"{match.Groups[1].Value}\"))");
-                    }
-                }
-
-                var setBody = new XElement("set-body", PayloadContent);
-                setBody.Add(new XAttribute("template", "liquid"));
-                newPolicy.Add(setBody);
-            }
 
             return newPolicy;
         }
