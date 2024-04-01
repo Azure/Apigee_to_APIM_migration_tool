@@ -36,7 +36,7 @@ namespace ApigeeToApimMigrationTool.Test
             _azureApimServiceUnderTest = new AzureApimService(
                 apigeeXmlLoader: apigeeXmlLoader,
                 apimProvider: _apimProvider,
-                policyTransformer: new ApigeeToApimPolicyTransformer(policyTransformationFactory));
+                policyTransformer: new ApigeeToApimPolicyTransformer(policyTransformationFactory, _apimProvider));
         }
         [Fact]
         public async Task FileBundleLoader_WithSharedFlowPolicy_LoadsSharedFlow()

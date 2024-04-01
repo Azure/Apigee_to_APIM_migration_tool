@@ -16,6 +16,7 @@ using Azure;
 using System.Xml.Linq;
 using System.Net;
 using ApigeeToApimMigrationTool.Core.Config;
+using System.Collections;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -127,7 +128,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             {
                 await InitializeArmClient();
             }
-            
+
             ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
             ApiManagementProductCollection apiProducts = apimResource.GetApiManagementProducts();
             var apiProduct = await apiProducts.CreateOrUpdateAsync(WaitUntil.Completed, name.Trim().Replace(" ", "_"), new ApiManagementProductData
@@ -289,6 +290,38 @@ namespace ApigeeToAzureApimMigrationTool.Service
             await namedValues.CreateOrUpdateAsync(WaitUntil.Completed, namedValueName, namedValueContent);
         }
 
+        public async Task UpdateApiSubscriptionSetting(string apimName, string proxyName, string headerName = "", string queryParameterName = "")
+        {
+            if (_resourceGroup == null)
+            {
+                await InitializeArmClient();
+            }
+
+            ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
+
+            _apiResource = apimResource.GetApi(proxyName);
+
+            if (string.IsNullOrEmpty(headerName) && string.IsNullOrEmpty(queryParameterName))
+            {
+                throw new Exception("Both header and query parameter names cannot be empty");
+            }
+
+
+            var apiSetting = new ApiCreateOrUpdateContent
+            {
+                IsSubscriptionRequired = true,
+                SubscriptionKeyParameterNames = new SubscriptionKeyParameterNamesContract
+                {
+                    Header = headerName,
+                    Query = queryParameterName,
+                    
+                }
+            };
+
+            var apiCollection = apimResource.GetApis();
+            await apiCollection.CreateOrUpdateAsync(WaitUntil.Completed, proxyName, apiSetting);
+
+        }
 
         private async Task<string> GetAccessToken()
         {
@@ -296,6 +329,8 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var result = await credentials.GetTokenAsync(new TokenRequestContext(new[] { "https://management.azure.com/.default" }), CancellationToken.None);
             return result.Token;
         }
+
+
 
     }
 

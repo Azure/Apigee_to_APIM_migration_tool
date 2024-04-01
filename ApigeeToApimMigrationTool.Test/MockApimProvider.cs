@@ -60,5 +60,10 @@ namespace ApigeeToApimMigrationTool.Test
             var mockProduct = new MockApiManagementProductResource();
             return Task.FromResult(mockProduct as ApiManagementProductResource);
         }
+
+        public Task UpdateApiSubscriptionSetting(string apimName, string proxyName, string headerName = "", string queryParameterName = "")
+        {
+            return Task.CompletedTask;
+        }
     }
 }

@@ -17,11 +17,13 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         private readonly IPolicyTransformationFactory _policyTransformationFactory;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
+        private readonly IApimProvider _apimProvider;
 
-        public ApigeeToApimPolicyTransformer(IPolicyTransformationFactory policyTransformationFactory)
+        public ApigeeToApimPolicyTransformer(IPolicyTransformationFactory policyTransformationFactory, IApimProvider apimProvider)
         {
             _policyTransformationFactory = policyTransformationFactory;
             _policyVariables = new List<KeyValuePair<string, string>>();
+            _apimProvider = apimProvider;
         }
         public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader,
             string apimName, string proxyName, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
@@ -61,20 +63,36 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     throw new Exception($"Cannot find root element in policy xml: {policyXml}");
                 }
 
-                await TransformPolicy(rootElement, rootElement.Name.ToString(), azureApimPolicySection, apimName, condition, policyName, apigeeConfiguration, apimConfig);
+                await TransformPolicy(proxyName, rootElement, rootElement.Name.ToString(), azureApimPolicySection, apimName, condition, policyName, apigeeConfiguration, apimConfig);
             }
 
         }
 
-        private async Task TransformPolicy(XElement element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName,
+        private async Task TransformPolicy(string apiProxyName, XElement element, string apigeePolicyName, XElement apimPolicyElement, string apimName, string condition, string apigeePolicyDisplayName,
             ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
         {
-            var policyTransformation = _policyTransformationFactory.GetTransformationForPolicy(apigeePolicyName, _policyVariables, apigeeConfiguration, apimConfig);
-            var apimPolicies = await policyTransformation.Transform(element, apigeePolicyDisplayName);
-            foreach (var apimPolicy in apimPolicies)
+            IPolicyTransformation? policyTransformation = default;
+            if (apigeePolicyName.Equals("VerifyAPIKey"))
             {
-                var policyWithCondition = ApplyConditionToPolicy(condition, apimPolicy);
-                apimPolicyElement.Add(policyWithCondition);
+                string headerValue = "";
+                string queryParameterValue = "";
+                var source = element.Element("APIKey").Attribute("ref").Value;
+                if (source.StartsWith("request.header"))
+                    headerValue = source.Replace("request.header.", "");
+                else if (source.StartsWith("request.queryparam"))
+                    queryParameterValue = source.Replace("request.queryparam.", "");
+
+                await _apimProvider.UpdateApiSubscriptionSetting(apimConfig.Name, apiProxyName, headerValue, queryParameterValue);
+            }
+            else
+            {
+                policyTransformation = _policyTransformationFactory.GetTransformationForPolicy(apigeePolicyName, _policyVariables, apigeeConfiguration, apimConfig);
+                var apimPolicies = await policyTransformation.Transform(element, apigeePolicyDisplayName);
+                foreach (var apimPolicy in apimPolicies)
+                {
+                    var policyWithCondition = ApplyConditionToPolicy(condition, apimPolicy);
+                    apimPolicyElement.Add(policyWithCondition);
+                }
             }
 
             // Special handling for Shared Flows, for which additional policies need to be downloaded from Apigee
