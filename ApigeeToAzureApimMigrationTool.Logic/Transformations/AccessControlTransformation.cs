@@ -1,6 +1,5 @@
 ﻿using ApigeeToAzureApimMigrationTool.Core.Enum;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
-using LukeSkywalker.IPNetwork;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +38,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     else
                     {
                         //TODO: add support for variable used in mask
-                        IPNetwork ipnetwork = IPNetwork.Parse($"{address}/{mask}");
+                        var ipnetwork = System.Net.IPNetwork2.Parse($"{address}/{mask}");
                         var addressRangeElement = new XElement("address-range");
                         addressRangeElement.Add(new XAttribute("from", ipnetwork.FirstUsable), new XAttribute("to", ipnetwork.LastUsable));
                         newPolicy.Add(addressRangeElement);

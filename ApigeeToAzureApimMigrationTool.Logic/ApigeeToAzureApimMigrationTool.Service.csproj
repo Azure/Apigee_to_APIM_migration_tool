@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.10.2" />
     <PackageReference Include="Azure.ResourceManager.ApiManagement" Version="1.1.0" />
-    <PackageReference Include="IPNetwork" Version="1.3.2" />
+    <PackageReference Include="IPNetwork2" Version="3.0.667" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Linq.Dynamic.Core" Version="1.3.3" />
     <PackageReference Include="System.Xml.XDocument" Version="4.3.0" />
