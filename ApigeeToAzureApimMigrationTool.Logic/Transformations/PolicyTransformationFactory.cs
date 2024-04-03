@@ -55,6 +55,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     return new BasicAuthenticationTransformation();
                 case "SpikeArrest":
                     return new SpikeArrestTransformation(_expressionTranslator);
+                case "AccessControl":
+                    return new AccessControlTransformation();
                 default:
                     return new NullTransformation();
 
