@@ -17,6 +17,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly HttpClient _client;
         private readonly string _authenticationBaseUrl;
         private readonly IProxyMetaDataDataAccess _proxyMetaDataDataAccess;
+        private string _authenticationCode;
         public ApigeeManagementApiService(ApigeeConfiguration apigeeConfiguration, IProxyMetaDataDataAccess proxyMetaDataDataAccess)
         {
             _client = new HttpClient();
@@ -32,7 +33,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             Environment = apigeeConfiguration.EnvironmentName;
         }
 
-        public string AuthenticationToken { get; set;}
+        public string AuthenticationToken { get; set; }
         public string Username { get; set; }
         public string Password { get; set; }
 
@@ -150,7 +151,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     {
                         HttpResponseMessage apiRevisionResponse = await _client.GetAsync($"apis/{proxy}/revisions/{revision}");
                         var proxyRevisionMetaData = JsonConvert.DeserializeObject<ApiProxyRevisionMetadata>(await apiRevisionResponse.Content.ReadAsStringAsync());
-                        
+
                         proxyRevisionMetaData.ProxyEndpointPaths = new Dictionary<string, string>();
                         foreach (var endpoint in proxyRevisionMetaData.ProxyEndpoints)
                         {
@@ -182,36 +183,39 @@ namespace ApigeeToAzureApimMigrationTool.Service
         }
         private async Task<string> GetBearerTokenFromOneTimeAuthToken()
         {
-            HttpClient client = new HttpClient();
+            if (string.IsNullOrEmpty(_authenticationCode))
+            {
+                HttpClient client = new HttpClient();
+                // NOT A REAL TOKEN.  THIS IS A DEFAULT TOKEN THAT IS REQUIRED FOR ALL CLIENTS BY THE API
+                // See: https://docs.apigee.com/api-platform/system-administration/management-api-tokens#request-headers
+                client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
 
-            // NOT A REAL TOKEN.  THIS IS A DEFAULT TOKEN THAT IS REQUIRED FOR ALL CLIENTS BY THE API
-            // See: https://docs.apigee.com/api-platform/system-administration/management-api-tokens#request-headers
-            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
+                HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&passcode={AuthenticationToken}", null);
+                authTokenResponse.EnsureSuccessStatusCode();
+                var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
+                _authenticationCode = authresponse.access_token;
+            }
 
-            HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&passcode={AuthenticationToken}", null);
-            authTokenResponse.EnsureSuccessStatusCode();
-            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
-
-            string token = authresponse.access_token;
-
-            return token;
+            return _authenticationCode;
         }
 
         private async Task<string> GetBearerTokenFromUsernameAndPassword()
         {
-            HttpClient client = new HttpClient();
+            if (string.IsNullOrEmpty(_authenticationCode))
+            {
+                HttpClient client = new HttpClient();
 
-            // NOT A REAL TOKEN.  THIS IS A DEFAULT TOKEN THAT IS REQUIRED FOR ALL CLIENTS BY THE API
-            // See: https://docs.apigee.com/api-platform/system-administration/management-api-tokens#request-headers
-            client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
+                // NOT A REAL TOKEN.  THIS IS A DEFAULT TOKEN THAT IS REQUIRED FOR ALL CLIENTS BY THE API
+                // See: https://docs.apigee.com/api-platform/system-administration/management-api-tokens#request-headers
+                client.DefaultRequestHeaders.Add("Authorization", "Basic ZWRnZWNsaTplZGdlY2xpc2VjcmV0");
 
-            HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&username={Username}&password={Password}", null);
-            authTokenResponse.EnsureSuccessStatusCode();
-            var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
+                HttpResponseMessage authTokenResponse = await client.PostAsync($"{_authenticationBaseUrl}/oauth/token?grant_type=password&username={Username}&password={Password}", null);
+                authTokenResponse.EnsureSuccessStatusCode();
+                var authresponse = JsonConvert.DeserializeObject<AuthToken>(await authTokenResponse.Content.ReadAsStringAsync());
+                _authenticationCode = authresponse.access_token;
+            }
 
-            string token = authresponse.access_token;
-
-            return token;
+            return _authenticationCode;
         }
 
 

@@ -17,6 +17,8 @@ using System.Xml.Linq;
 using System.Net;
 using ApigeeToApimMigrationTool.Core.Config;
 using System.Collections;
+using System.ComponentModel;
+using System.Web;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -109,6 +111,13 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     api.AuthenticationSettings = authenticationSetting;
                 }
 
+                if (apiName.Length > 80)
+                {
+                    apiName = apiName.Substring(0, 80);
+                    apiName = RemoveTrailingSpecialCharacters(apiName);
+                }
+
+
                 var importedApi = await apiCollection.CreateOrUpdateAsync(Azure.WaitUntil.Completed, apiName.Trim().Replace(" ", ""), api);
 
                 _apiResource = _client.GetApiResource(importedApi.Value.Id);
@@ -156,14 +165,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
         public async Task CreateOrUpdateOperation(string apiName, string description, string httpVerb)
         {
             if (_apiResource == null)
-            {
                 throw new Exception($"Cannot add operation to API {apiName}: API not yet created.");
-            }
 
-            if (_apiOperations == null)
-            {
-                _apiOperations = _apiResource.GetApiOperations();
-            }
+            _apiOperations = _apiResource.GetApiOperations();
 
             string apiOperationName = $"{apiName}_{httpVerb}";
             await _apiOperations.CreateOrUpdateAsync(WaitUntil.Completed, apiOperationName, new ApiOperationData
@@ -177,56 +181,57 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         public async Task CreateOrUpdateOperationPolicy(XDocument operationPolicyXml, string operationName, string operationDescription, string httpVerb, string proxyPath)
         {
-
-            if (_apiResource == null)
+            try
             {
-                throw new Exception($"Cannot add operation policy to API {operationName}: API not yet created.");
+
+                if (_apiResource == null)
+                {
+                    throw new Exception($"Cannot add operation policy to API {operationName}: API not yet created.");
+                }
+
+                if (_apiOperations == null)
+                {
+                    _apiOperations = _apiResource.GetApiOperations();
+                }
+
+                string apimOperationName = $"{operationName.Replace(" ", "_").Trim()}";
+                var apimOperationResource = await _apiOperations.CreateOrUpdateAsync(WaitUntil.Completed, apimOperationName, new ApiOperationData
+                {
+                    DisplayName = operationName,
+                    Description = operationDescription,
+                    Method = httpVerb,
+                    UriTemplate = string.IsNullOrEmpty(proxyPath) ? "/" : proxyPath
+                });
+
+                var operationPolicyParameters = new PolicyContractData
+                {
+                    Value = HttpUtility.HtmlDecode(operationPolicyXml.ToString()),
+                    Format = PolicyContentFormat.RawXml
+                };
+
+                await apimOperationResource.Value.GetApiOperationPolicies().CreateOrUpdateAsync(WaitUntil.Completed, $"policy", operationPolicyParameters);
             }
-
-            if (_apiOperations == null)
+            catch (Exception ex)
             {
-                _apiOperations = _apiResource.GetApiOperations();
+                throw new Exception($"erro in policy XML: {HttpUtility.HtmlDecode(operationPolicyXml.ToString())}, /n Error: {ex.ToString()}");
             }
-
-            string apimOperationName = $"{operationName.Replace(" ", "_").Trim()}_{httpVerb}";
-            var apimOperationResource = await _apiOperations.CreateOrUpdateAsync(WaitUntil.Completed, apimOperationName, new ApiOperationData
-            {
-                DisplayName = operationName,
-                Description = operationDescription,
-                Method = httpVerb,
-                UriTemplate = string.IsNullOrEmpty(proxyPath) ? "/" : proxyPath
-            });
-
-            var operationPolicyParameters = new PolicyContractData
-            {
-                Value = operationPolicyXml.ToString(),
-                Format = PolicyContentFormat.RawXml
-            };
-
-            await apimOperationResource.Value.GetApiOperationPolicies().CreateOrUpdateAsync(WaitUntil.Completed, $"policy", operationPolicyParameters);
 
         }
 
         public async Task CreatePolicy(XDocument policyXml)
         {
             if (_apiResource == null)
-            {
                 throw new Exception($"Cannot create policy for API: API not yet created.");
-            }
 
-            if (_apiPolicies == null)
-            {
                 _apiPolicies = _apiResource.GetApiPolicies();
-            }
 
             var policyParameters = new PolicyContractData
             {
-                Value = WebUtility.HtmlDecode(policyXml.ToString()),
+                Value = HttpUtility.HtmlDecode(policyXml.ToString()),
                 Format = PolicyContentFormat.RawXml
             };
 
             await _apiPolicies.CreateOrUpdateAsync(Azure.WaitUntil.Completed, $"policy", policyParameters);
-
         }
 
 
@@ -247,6 +252,31 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var response = await _httpClient.PutAsJsonAsync($"https://management.azure.com/subscriptions/{_subscriptionId}/resourceGroups/{_resourceGroupName}/providers/Microsoft.ApiManagement/service/{apimName}/policyFragments/{policyFragmentName}?api-version=2023-03-01-preview", body);
             if (!response.IsSuccessStatusCode)
                 throw new Exception($"can't create Policy Fragment. Status code: {response.StatusCode} - {response.Content.ToString()}");
+            KeyValuePair<string, IEnumerable<string>>? location = response.Headers.FirstOrDefault(x => x.Key == "Location");
+            KeyValuePair<string, IEnumerable<string>>? azureAsyncOperation = response.Headers.FirstOrDefault(x => x.Key == "Azure-AsyncOperation");
+
+            if (location != null)
+            {
+                var statusCheckResponse = await _httpClient.GetAsync(location.Value.Value.First());
+                var statusCheckContent = await statusCheckResponse.Content.ReadAsStringAsync();
+                if (!statusCheckResponse.IsSuccessStatusCode)
+                    throw new Exception($"Error while creating the policy fragment. Error details: {statusCheckContent}");
+            }
+            else if (location == null && azureAsyncOperation != null)
+            {
+                while (true)
+                {
+                    var statusCheckResponse = await _httpClient.GetAsync(azureAsyncOperation.Value.Value.First());
+
+                    if (statusCheckResponse.Headers.Any(x => x.Key == "Location"))
+                        break;
+
+                    if (statusCheckResponse.Headers.Any(x => x.Key == "Retry-After"))
+                        Thread.Sleep(int.Parse(response.Headers.First(x => x.Key == "Retry-After").Value.First()));
+
+                }
+            }
+
 
             // WHY?
             //Thread.Sleep(5000);
@@ -264,11 +294,18 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
             string namedValueName = $"{mapIdentifier}-{keyName}-{index}";
             namedValueName = namedValueName.Replace("_", "-");
+            if (namedValueName.Length > 80)
+            {
+                namedValueName = namedValueName.Substring(0, 80);
+                namedValueName = RemoveTrailingSpecialCharacters(namedValueName);
+            }
+
+
 
             var namedValueContent = new ApiManagementNamedValueCreateOrUpdateContent
             {
                 DisplayName = namedValueName,
-                Tags = { proxyName, mapIdentifier }
+                Tags = { (proxyName.Length > 64 ? proxyName.Substring(0, 64) : proxyName), mapIdentifier.Length > 64 ? mapIdentifier.Substring(0, 64) : mapIdentifier }
             };
             if (isSecret)
             {
@@ -292,35 +329,62 @@ namespace ApigeeToAzureApimMigrationTool.Service
 
         public async Task UpdateApiSubscriptionSetting(string apimName, string proxyName, string headerName = "", string queryParameterName = "")
         {
-            if (_resourceGroup == null)
+            try
             {
-                await InitializeArmClient();
-            }
-
-            ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
-
-            _apiResource = apimResource.GetApi(proxyName);
-
-            if (string.IsNullOrEmpty(headerName) && string.IsNullOrEmpty(queryParameterName))
-            {
-                throw new Exception("Both header and query parameter names cannot be empty");
-            }
-
-
-            var apiSetting = new ApiCreateOrUpdateContent
-            {
-                IsSubscriptionRequired = true,
-                SubscriptionKeyParameterNames = new SubscriptionKeyParameterNamesContract
+                if (_resourceGroup == null)
                 {
-                    Header = headerName,
-                    Query = queryParameterName,
-                    
+                    await InitializeArmClient();
                 }
-            };
 
-            var apiCollection = apimResource.GetApis();
-            await apiCollection.CreateOrUpdateAsync(WaitUntil.Completed, proxyName, apiSetting);
+                ApiManagementServiceResource apimResource = await _resourceGroup.GetApiManagementServiceAsync(apimName);
 
+                _apiResource = apimResource.GetApi(proxyName);
+
+                if (string.IsNullOrEmpty(headerName) && string.IsNullOrEmpty(queryParameterName))
+                {
+                    throw new Exception("Both header and query parameter names cannot be empty");
+                }
+
+
+                var apiSetting = new ApiCreateOrUpdateContent
+                {
+                    IsSubscriptionRequired = true,
+                    SubscriptionKeyParameterNames = new SubscriptionKeyParameterNamesContract
+                    {
+                        Header = headerName,
+                        Query = queryParameterName,
+
+                    }
+                };
+
+                var apiCollection = apimResource.GetApis();
+                await apiCollection.CreateOrUpdateAsync(WaitUntil.Completed, proxyName, apiSetting);
+            }
+            catch (Exception ex)
+            {
+
+                //TODO: Log the error 
+            }
+
+        }
+
+        public string RemoveTrailingSpecialCharacters(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            // Define the special characters
+            char[] specialChars = new char[] { '_', '-', '+', '|', '\\', '/' };
+
+            // Loop from the end of the string until a non-special character is found
+            int i = input.Length - 1;
+            while (i >= 0 && specialChars.Contains(input[i]))
+            {
+                i--;
+            }
+
+            // Return the substring without the trailing special characters
+            return input.Substring(0, i + 1);
         }
 
         private async Task<string> GetAccessToken()
@@ -329,6 +393,9 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var result = await credentials.GetTokenAsync(new TokenRequestContext(new[] { "https://management.azure.com/.default" }), CancellationToken.None);
             return result.Token;
         }
+
+
+
 
 
 

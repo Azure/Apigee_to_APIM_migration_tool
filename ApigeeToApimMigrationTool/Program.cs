@@ -108,7 +108,7 @@ var apimOauthIssuersOption = new Option<string>(
     description: "Comma seperated list of OAuth issuers (optional)");
 
 var apimOauthScopeClaimNameOption = new Option<string>(
-    name: "--apimOauthIssuers",
+    name: "--apimOauthScopeClaimName",
     description: "Name of OAuth scope clam name. Default is \"scope\" (optional)");
 
 // Other Azure Options

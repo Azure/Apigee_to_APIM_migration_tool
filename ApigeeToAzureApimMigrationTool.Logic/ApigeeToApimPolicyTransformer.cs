@@ -1,13 +1,16 @@
 ﻿using ApigeeToApimMigrationTool.Core.Config;
 using ApigeeToAzureApimMigrationTool.Core.Interface;
 using ApigeeToAzureApimMigrationTool.Service.Transformations;
+using Azure.ResourceManager.ApiManagement.Models;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml.Linq;
 
 namespace ApigeeToAzureApimMigrationTool.Service
@@ -18,12 +21,14 @@ namespace ApigeeToAzureApimMigrationTool.Service
         private readonly IPolicyTransformationFactory _policyTransformationFactory;
         private readonly List<KeyValuePair<string, string>> _policyVariables;
         private readonly IApimProvider _apimProvider;
+        private readonly IExpressionTranslator _expressionTranslator;
 
-        public ApigeeToApimPolicyTransformer(IPolicyTransformationFactory policyTransformationFactory, IApimProvider apimProvider)
+        public ApigeeToApimPolicyTransformer(IPolicyTransformationFactory policyTransformationFactory, IApimProvider apimProvider, IExpressionTranslator expressionTranslator)
         {
             _policyTransformationFactory = policyTransformationFactory;
             _policyVariables = new List<KeyValuePair<string, string>>();
             _apimProvider = apimProvider;
+            _expressionTranslator = expressionTranslator;
         }
         public async Task TransformPoliciesInCollection(IEnumerable<XElement>? elements, XElement azureApimPolicySection, Func<string, string, XDocument> xmlLoader,
             string apimName, string proxyName, ApigeeConfiguration apigeeConfiguration, ApimConfiguration apimConfig)
@@ -108,8 +113,19 @@ namespace ApigeeToAzureApimMigrationTool.Service
         {
             if (!string.IsNullOrEmpty(condition))
             {
-                ExpressionTranslator expressionTranslator = new ExpressionTranslator();
-                condition = expressionTranslator.TranslateWholeString(condition);
+
+                condition = _expressionTranslator.TranslateWholeString(condition);
+
+                string requestHeaderPattern = "request\\.header\\.([-\\w]+)";
+                foreach (Match match in Regex.Matches(condition, requestHeaderPattern))
+                {
+                    if (match.Success && match.Groups.Count > 0)
+                    {
+                        var HeaderName = match.Groups[1].Value;
+                        string completeExpression = $"request.header.{HeaderName}";
+                        condition = condition.Replace(completeExpression, $"context.Request.Headers.GetValueOrDefault(\"{HeaderName}\", \"\")");
+                    }
+                }
 
                 string cacheLookupPattern = @"lookupcache.(.*?).cachehit";
                 foreach (Match match in Regex.Matches(condition, cacheLookupPattern))
@@ -135,58 +151,28 @@ namespace ApigeeToAzureApimMigrationTool.Service
                     }
                 }
 
-
-                string variableEqualsNullPattern = @"[^ ]* == null";
-                foreach (Match match in Regex.Matches(condition, variableEqualsNullPattern))
-                {
-                    if (match.Success && match.Groups.Count > 0)
-                    {
-                        var variableName = match.Groups[0].Value;
-                        if (!variableName.Contains("context") && !string.IsNullOrEmpty(variableName))
-                        {
-                            variableName = variableName.Replace("(", "").Replace(")", "");
-                            condition = condition.Replace(variableName, $"!context.Variables.ContainsKey(\"{variableName.Replace("== null", "").Trim()}\")");
-                        }
-                    }
-                }
-
-                string variableDoesNotEqualsNullPattern = @"[^ ]* != null";
-                foreach (Match match in Regex.Matches(condition, variableDoesNotEqualsNullPattern))
-                {
-                    if (match.Success && match.Groups.Count > 0)
-                    {
-                        var variableName = match.Groups[0].Value;
-                        if (!variableName.Contains("context") && !string.IsNullOrEmpty(variableName))
-                        {
-                            variableName = variableName.Replace("(", "").Replace(")", "");
-                            condition = condition.Replace(variableName, $"context.Variables.ContainsKey(\"{variableName.Replace("!= null", "").Trim()}\")");
-                        }
-                    }
-                }
-
-                string variableEqualsValue = @"[^ ]* (=|==|!=) [^ ]*";
+                string variableEqualsValue = "(\\S+)\\s(=|==|!=|=\\\\|)\\s(\\S+)";
                 foreach (Match match in Regex.Matches(condition, variableEqualsValue))
                 {
-                    if (match.Success && match.Groups.Count > 0)
+                    if (match.Success && match.Groups.Count > 0 && !match.Groups[0].Value.Contains("context."))
                     {
-                        var variableName = match.Groups[0].Value;
-                        var conditionOperator = match.Groups[1].Value;
-                        var variableAndValue = variableName.Replace("(", "").Replace(")", "").Split(conditionOperator.Trim());
+                        var variableName = match.Groups[1].Value;
+                        var conditionOperator = match.Groups[2].Value;
+                        var variableValue = match.Groups[3].Value;
                         if (!variableName.Contains("context") && !string.IsNullOrEmpty(variableName))
                         {
-                            var variableValue = variableAndValue[1].Trim();
-                            var apimVariableName = variableAndValue[0].Trim();
-                            conditionOperator = conditionOperator.Trim().StartsWith("=") ? "==" : "!=";
-                            condition = condition.Replace(variableName, $"context.Variables.GetValueOrDefault<{GetDataTypeFromStringValue(variableValue)}>(\"{apimVariableName}\") {conditionOperator} {variableValue}");
+                            string valueToReplace = match.Groups[0].Value;
+                            valueToReplace = valueToReplace.Replace("(", "").Replace(")", "");
+                            condition = condition.Replace(valueToReplace, $"context.Variables.GetValueOrDefault<{GetDataTypeFromStringValue(variableValue)}>(\"{variableName.Replace("(", "").Replace(")", "")}\") {conditionOperator} {variableValue.Replace("(", "").Replace(")", "")}");
                         }
                     }
                 }
 
 
 
-                condition = WebUtility.HtmlDecode($"@({condition})");
+                condition = $"@({condition})";
                 var conditionelement = new XElement("choose", new XElement("when", ""));
-                conditionelement.Element("when").SetAttributeValue("condition", condition);
+                conditionelement.Element("when").SetAttributeValue("condition", HttpUtility.HtmlDecode(condition));
                 conditionelement.Element("when").Add(policy);
                 return conditionelement;
             }

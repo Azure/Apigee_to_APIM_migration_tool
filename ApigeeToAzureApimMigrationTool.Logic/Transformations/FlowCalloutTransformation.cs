@@ -8,6 +8,7 @@ using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml.Linq;
 
 namespace ApigeeToAzureApimMigrationTool.Service.Transformations
@@ -52,6 +53,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
         {
             var sharedFlowMetadata = await _apiService.GetSharedFlowByName(sharedFlowName);
             var bundle = _bundleProvider.GetSharedFlowBundle(sharedFlowName);
+            await bundle.LoadBundle();
             return await _apiService.DownloadSharedFlowBundle(bundle.GetBundlePath(), sharedFlowName, sharedFlowMetadata.revision.Select(x => int.Parse(x)).Max());
         }
 
@@ -74,7 +76,7 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                 var steps = sharedFlowRootElement.Elements("Step");
 
                 await apimPolicyTransformer.TransformPoliciesInCollection(steps, rawPolicyFragment.Root, _apigeeXmlLoader.LoadSharedFlowPolicyXml, apimName, sharedFlowName, _apigeeConfiguration, _apimConfiguration);
-                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, WebUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
+                await _apimProvider.CreatePolicyFragment(sharedFlowName, apimName, HttpUtility.HtmlDecode(rawPolicyFragment.ToString()), description);
             }
         }
 

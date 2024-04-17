@@ -48,12 +48,12 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             string keyFragment = cacheKey.Elements("KeyFragment").First(x => x.Attribute("ref") == null).Value;
             string keyFragmentRef = cacheKey.Elements("KeyFragment").First(x => x.Attribute("ref") != null).Attribute("ref").Value;
 
-            string timeout = element.Element("ExpirySettings").Element("TimeoutInSec").Value;
-            string timeoutRef = element.Element("ExpirySettings").Element("TimeoutInSec").Attribute("ref").Value;
-            string expiryDate = element.Element("ExpirySettings").Element("ExpiryDate").Value;
-            string expiryDateRef = element.Element("ExpirySettings").Element("ExpiryDate").Attribute("ref").Value;
-            string timeOfDay = element.Element("ExpirySettings").Element("TimeOfDay").Value;
-            string timeOfDayRef = element.Element("ExpirySettings").Element("TimeOfDay").Attribute("ref").Value;
+            string timeout = element.Element("ExpirySettings").Element("TimeoutInSec")?.Value;
+            string timeoutRef = element.Element("ExpirySettings").Element("TimeoutInSec")?.Attribute("ref")?.Value;
+            string expiryDate = element.Element("ExpirySettings").Element("ExpiryDate")?.Value;
+            string expiryDateRef = element.Element("ExpirySettings").Element("ExpiryDate")?.Attribute("ref")?.Value;
+            string timeOfDay = element.Element("ExpirySettings").Element("TimeOfDay")?.Value;
+            string timeOfDayRef = element.Element("ExpirySettings").Element("TimeOfDay")?.Attribute("ref")?.Value;
 
             string timeOutSeconds = "30";
             if (!string.IsNullOrEmpty(expiryDate))

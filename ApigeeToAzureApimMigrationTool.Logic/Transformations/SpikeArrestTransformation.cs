@@ -44,10 +44,14 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     rateExpression = (int.Parse(rate.Replace("ps", ""))).ToString();
             }
 
-            string counterKey = element.Element("Identifier").Attribute("ref").Value;
+            string counterKey = element.Element("Identifier")?.Attribute("ref")?.Value;
 
-            var rateLimitPolicy = new XElement("rate-limit-by-key", new XAttribute("calls", rateExpression), new XAttribute("renewal-period", renewalPeriodExpression),
-                new XAttribute("counter-key", $"@({_expressionTranslator.TranslateSingleItem(counterKey)})"));
+            XElement rateLimitPolicy;
+            if (!string.IsNullOrEmpty(counterKey))
+                rateLimitPolicy = new XElement("rate-limit-by-key", new XAttribute("calls", rateExpression), new XAttribute("renewal-period", renewalPeriodExpression),
+                    new XAttribute("counter-key", $"@({_expressionTranslator.TranslateSingleItem(counterKey)})"));
+            else
+                rateLimitPolicy = new XElement("rate-limit", new XAttribute("calls", rateExpression), new XAttribute("renewal-period", renewalPeriodExpression));
 
             policyList.Add(rateLimitPolicy);
             return Task.FromResult<IEnumerable<XElement>>(policyList);

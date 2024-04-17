@@ -23,5 +23,7 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
         Task AddNamedValue(string apimName, string proxyName, string mapIdentifier, string keyName, bool isSecret, string value, int index = 1);
         Task UpdateApiSubscriptionSetting(string apimName, string proxyName, string headerName = "", string queryParameterName = "");
 
+        string RemoveTrailingSpecialCharacters(string input);
+
     }
 }

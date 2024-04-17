@@ -2,9 +2,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace ApigeeToAzureApimMigrationTool.Service
 {
@@ -13,10 +16,12 @@ namespace ApigeeToAzureApimMigrationTool.Service
     public class ExpressionTranslator : IExpressionTranslator
     {
         private readonly Dictionary<string, string> _translationTable;
+        private readonly Dictionary<string, string> _translationTableForConditions;
 
         public ExpressionTranslator()
         {
             _translationTable = CreateTranslationTable();
+            _translationTableForConditions = CreateTranslationTableForConditions();
         }
 
         /// <summary>
@@ -27,6 +32,17 @@ namespace ApigeeToAzureApimMigrationTool.Service
         public string TranslateWholeString(string expression)
         {
             foreach (var item in _translationTable)
+                expression = expression.Replace(item.Key, item.Value);
+
+            foreach (var item in _translationTableForConditions)
+                expression = expression.Replace(item.Key, item.Value);
+
+            return expression;
+        }
+
+        public string TranslateConditionOperator (string expression)
+        {
+            foreach (var item in _translationTableForConditions)
                 expression = expression.Replace(item.Key, item.Value);
 
             return expression;
@@ -51,7 +67,15 @@ namespace ApigeeToAzureApimMigrationTool.Service
         /// <returns>The translated expression if found in the translation table, otherwise the original expression.</returns>
         public string TranslateSingleItem(string expression, string defaultValue = "")
         {
-            return _translationTable.ContainsKey(expression) ? _translationTable[expression] : $"context.Variables.GetValueOrDefault<string>(\"{expression}\",\"{defaultValue}\")";
+            string result = _translationTable.ContainsKey(expression) ? _translationTable[expression] : expression;
+
+            if (result.Contains("request.header."))
+            {
+                var headerName = result.Replace("request.header.", "");
+                result = $"context.Request.Headers.GetValueOrDefault(\"{headerName}\",\"\")";
+            }
+
+            return result ;
         }
 
         /// <summary>
@@ -62,9 +86,6 @@ namespace ApigeeToAzureApimMigrationTool.Service
         {
             var expressionList = new Dictionary<string, string>();
             expressionList.Add("request.verb", "context.Operation.Method");
-            expressionList.Add("request.header.origin", "context.Request.Headers.GetValueOrDefault(\"origin\")");
-            expressionList.Add("request.header.Access-Control-Request-Method", "context.Request.Headers.GetValueOrDefault(\"Access-Control-Request-Method\")");
-
             return expressionList;
         }
 
@@ -80,6 +101,7 @@ namespace ApigeeToAzureApimMigrationTool.Service
             expressionList.Add(" or ", " || ");
             expressionList.Add(" OR ", " || ");
             expressionList.Add(" = ", " == ");
+            expressionList.Add(" =| ", " == ");
 
             return expressionList;
         }

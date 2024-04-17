@@ -96,6 +96,12 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     string namedValueName = $"{mapIdentifier}-{key}-{index}";
                     namedValueName = namedValueName.Replace("_", "-");
 
+                    if (namedValueName.Length > 80)
+                    {
+                        namedValueName = namedValueName.Substring(0, 80);
+                        namedValueName = _apimProvider.RemoveTrailingSpecialCharacters(namedValueName);
+                    }
+
                     var policy = new XElement("set-variable", new XAttribute("name", variableName), new XAttribute("value", "{{" + namedValueName + "}}"));
                     _policyVariables.Add(new KeyValuePair<string, string>(policyName, variableName));
                     setVariablePolicies.Root.Add(policy);

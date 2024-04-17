@@ -39,6 +39,7 @@ namespace ApigeeToApimMigrationTool.Core.Config
             _oAuthAudienceOption = oAuthAudienceOption;
             _oAuthIssuersOptionn = oAuthIssuersOptionn;
             _oAuthScopeClaimNameOptionn = oAuthScopeClaimNameOptionn;
+            _urlOption = urlOption;
         }
 
         protected override ApimConfiguration GetBoundValue(BindingContext bindingContext) => new ApimConfiguration
