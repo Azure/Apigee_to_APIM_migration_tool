@@ -61,6 +61,11 @@ namespace ApigeeToApimMigrationTool.Test
             return Task.FromResult(mockProduct as ApiManagementProductResource);
         }
 
+        public string RemoveTrailingSpecialCharacters(string input)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task UpdateApiSubscriptionSetting(string apimName, string proxyName, string headerName = "", string queryParameterName = "")
         {
             return Task.CompletedTask;

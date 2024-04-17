@@ -34,13 +34,14 @@ namespace ApigeeToApimMigrationTool.Test
             var policyTransformationFactory = new PolicyTransformationFactory(
                 _mockApigeeManagementApiService, _mockApimProvider, _mockBundleProvider, _mockApigeeXmlLoader, _expressionTranslator);
 
-            var policyTransformer = new ApigeeToApimPolicyTransformer(policyTransformationFactory, _mockApimProvider);
+            var policyTransformer = new ApigeeToApimPolicyTransformer(policyTransformationFactory, _mockApimProvider, _expressionTranslator);
 
             _azureApimServiceUnderTest = new AzureApimService(
                 apimProvider: _mockApimProvider, 
                 apigeeXmlLoader: _mockApigeeXmlLoader,
-                policyTransformer: policyTransformer);
-
+                policyTransformer: policyTransformer,
+                expressionTranslator: _expressionTranslator);
+            
             SetupDefaultPolicies();
         }
 

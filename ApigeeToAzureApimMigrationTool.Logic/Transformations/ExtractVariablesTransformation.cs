@@ -66,6 +66,10 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
                     isSourceVariable = true;
             }
 
+            if (sourceName.Equals("request"))
+                sourceName = "Request";
+            if (sourceName.Equals("response"))
+                sourceName = "Response";
 
             if (element.Element("JSONPayload") != null)
             {

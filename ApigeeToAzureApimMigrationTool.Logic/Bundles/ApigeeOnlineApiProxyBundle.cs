@@ -38,7 +38,8 @@ namespace ApigeeToAzureApimMigrationTool.Service.Bundles
                 throw new Exception("Bundle not loaded. Please load the bundle first");
             }
 
-            return _bundlePath;
+            return Path.Combine(_basePath, _proxyOrProductName, "apiproxy");
+
         }
     }
 }

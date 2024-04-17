@@ -11,5 +11,6 @@ namespace ApigeeToAzureApimMigrationTool.Core.Interface
         bool ContentHasVariablesInIt(string content);
         string TranslateSingleItem(string expression, string defaultValue = "");
         string TranslateWholeString(string expression);
+        string TranslateConditionOperator(string expression);
     }
 }

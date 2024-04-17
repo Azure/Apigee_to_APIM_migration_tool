@@ -21,12 +21,16 @@ namespace ApigeeToApimMigrationTool.Test
         private readonly AzureApimService _azureApimServiceUnderTest;
         private readonly IBundleProvider _bundleProvider;
         private readonly MockApimProvider _apimProvider;
+        private readonly IExpressionTranslator _expressionTranslator;
+
         public BundleLoaderTests()
         {
             var testConfigPath = "TestBundles";
 
             _bundleProvider = new ApigeeFileBundleProvider(testConfigPath);
             _apimProvider = new MockApimProvider();
+            _expressionTranslator = new ExpressionTranslator();
+
 
             IApigeeXmlLoader apigeeXmlLoader = new ApigeeXmlFileLoader(_bundleProvider);
             IExpressionTranslator expressionTranslator = new ExpressionTranslator();
@@ -36,7 +40,8 @@ namespace ApigeeToApimMigrationTool.Test
             _azureApimServiceUnderTest = new AzureApimService(
                 apigeeXmlLoader: apigeeXmlLoader,
                 apimProvider: _apimProvider,
-                policyTransformer: new ApigeeToApimPolicyTransformer(policyTransformationFactory, _apimProvider));
+                expressionTranslator: _expressionTranslator,
+                policyTransformer: new ApigeeToApimPolicyTransformer(policyTransformationFactory, _apimProvider, _expressionTranslator));
         }
         [Fact]
         public async Task FileBundleLoader_WithSharedFlowPolicy_LoadsSharedFlow()

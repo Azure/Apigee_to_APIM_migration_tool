@@ -44,17 +44,6 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             var newPolicy = new XElement("send-request", new XAttribute("mode", $"new"), new XAttribute("response-variable-name", responseVariable),
                 new XAttribute("timeout", timeout), new XAttribute("ignore-error", $"{continueOnError}"));
 
-            
-            var apimPolicies = BuildApimPolicyCollection(element.Element("Request")).ToList();
-
-            foreach (var policy in apimPolicies)
-            {
-                newPolicy.Add(policy);
-            }
-
-            string verb = element.Element("Request")?.Element("Set")?.Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
-            newPolicy.Add(new XElement("set-method", verb));
-
             string url = string.Empty;
             string targetServerName = string.Empty;
 
@@ -95,6 +84,16 @@ namespace ApigeeToAzureApimMigrationTool.Service.Transformations
             }
 
             newPolicy.Add(new XElement("set-url", url));
+
+            string verb = element.Element("Request")?.Element("Set")?.Element("Verb") != null ? element.Element("Request").Element("Set").Element("Verb").Value : "GET";
+            newPolicy.Add(new XElement("set-method", verb));
+
+            var apimPolicies = BuildApimPolicyCollection(element.Element("Request")).ToList();
+
+            foreach (var policy in apimPolicies)
+            {
+                newPolicy.Add(policy);
+            }
 
             return newPolicy;
         }
