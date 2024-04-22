@@ -5,31 +5,38 @@ The main purpose of this application is to migrate Apigee API Products, API Prox
 
 ![image](https://github.com/Azure/Apigee_to_APIM_migration_tool/assets/106823811/8df21f97-503a-4af0-97ae-9f7675dcc8c8)
 
-Migration tool requires input parameters listed below. Alternatively it can use a JSON file to store information related to Azure Service Principal and Azure APIM.
+## Options List
+All required options are mandetory and must be supplied.
 
-Parameter Name |	Parameter Description|Notes|
----------------|-------------------------|-----|
---configFile|Config File Name|JSON configuration file so you don't need to specify all of these command line options (see apigeeToApimConfig.SAMPLE.json)
---apigeeConfigDir|Config Directory Name|A directory containing pre-downloaded Apigee policy XML files, useful for testing if you don't want to continually download your policies from Apigee with every run.
---apigeeManagementApiBaseUrl |	Apigee Management Api Base Url |	Base URL for Apigee's management API (ex: https://api.enterprise.apigee.com)
---apigeeAuthenticationBaseUrl|	Apigee Authentication BaseUrl |	Base URL for authentication against Apigee (ex: https://yourcompany.login.apigee.com)
---apigeeOrganizationName |	Apigee Organization Name |	Name of the Apigee organization that the API Proxy is hosted in
---proxyOrProduct| Proxy or Product |	Define what you want to migrate. Accepted vales are "product" and "proxy"
---proxyOrProductName| API Product or Proxy Name |	Name of the Apigee API Product or Proxy to migrate
---apigeeUsername|	Apigee username | Apigee username to use to authenticate against Apigee
---apigeePassword|	Apigee password | Apigee password to use to authenticate against Apigee
---azureAppId|	App ID| App ID of the Service Principal created in Azure
---azurePassword| App Password |	Password of the Service Principal created in Azure
---azureTenantId|Tenant ID |	Tenant ID of the Azure Active Directory
---azureSubscriptionId|	Subscription ID |	Azure Subscription ID where Azure APIM is deployed in
---apimUrl| APIM URL| URL of the target Azure APIM instance
---apimName|	APIM Name |	Name of the target Azure APIM instance
---apimResourceGroup|	Resource Group Name |	Name of the Resource Group that Azure APIM is deployed in
---apimOauthConfigName|	OAuth configuration name | Name of the OAuth config created in Azure APIM. This must exist before executing the tool <code style="color : red">(optional)</code>
---apimOauthBackendAppId| Backend App ID | App registration ID to use for OAuth <code style="color : red">(optional)</code>
---apimOauthTenantId| Azure AD Tenant ID | Azure AD Tenent ID ito use in OAuth configuration <code style="color : red">(optional)</code>
---apigeeEnvironmentName|	Apigee environment Name |	Name of the Apigee environment the proxy is being migrated from
---keyVaultName|	Azure Key Vault Name |	Name of the Azure Key Vault to be used with Named Values. Note that if you provide this value, all encrypted Key Value Maps from Apigee will be moved to APIM Named Values that point to a secret in Key Vault. Those secrets must be created beforhand with the following naming convention: mapIdentifier-keyName and Azure APIM must be able to access the Key Vault instance <code style="color : red">(optional)</code>
+| Option Name                   | Description                                                                                         | Required |
+|-------------------------------|-----------------------------------------------------------------------------------------------------|----------|
+| --apigeeOrganizationName      | Apigee organization name                                                                            | Yes      |
+| --apigeeAuthenticationBaseUrl | Apigee authentication base URL (ex: https://yourcompanyname.login.apigee.com)                      | Yes      |
+| --apigeeManagementApiBaseUrl  | Apigee management API base URL (ex: https://api.enterprise.apigee.com)                              | Yes      |
+| --apigeeUsername*              | Apigee username                                                                                     | No      |
+| --apigeePassword*              | Apigee password                                                                                     | No      |
+| --apigeePasscode*              | Apigee passcode (can be retrieved from this URL: https://yourcompanyname.login.apigee.com/passcode) | No       |
+| --proxyOrProduct              | Migrating Product or Proxy? (enter "Product" or "Proxy" as answer)                                  | Yes      |
+| --proxyOrProductName          | Name of the proxy or product you'd like to migrate                                                  | Yes      |
+| --apigeeEnvironmentName       | Apigee environment name                                                                             | Yes      |
+| --apigeeConfigDir             | Specify a local directory to load the Apigee configuration bundle from                              | No       |
+| --azureAppId                  | Azure service principal App ID                                                                      | Yes      |
+| --azurePassword               | Azure service principal Password                                                                     | Yes      |
+| --azureTenantId               | Azure Tenant ID                                                                                     | Yes      |
+| --azureSubscriptionId         | Azure subscription ID                                                                               | Yes      |
+| --apimUrl                     | Azure APIM URL                                                                                      | Yes      |
+| --apimName                    | Azure APIM name                                                                                     | Yes      |
+| --apimResourceGroup           | Azure APIM resource group name                                                                      | Yes      |
+| --apimOauthConfigName         | Oauth configuration name (optional)                                                                 | No       |
+| --apimOauthBackendAppId       | Backend app registration ID (optional)                                                              | No       |
+| --apimOauthTenantId           | Azure AD tenant ID (optional)                                                                       | No       |
+| --apimOauthAudiences          | Comma separated list of OAuth audiences (optional)                                                   | No       |
+| --apimOauthIssuers            | Comma separated list of OAuth issuers (optional)                                                    | No       |
+| --apimOauthScopeClaimName     | Name of OAuth scope claim name. Default is "scope" (optional)                                        | No       |
+| --keyVaultName                | Azure Key Vault name you'd like to use for named values in APIM (optional)                           | No       |
+| --configFile                  | Path to the configuration file (optional)                                                            | No       |
+
+\* either apigeeUsername and apigeePassword or apigeePasscode are required. If both are provided, username and password will be used.
 
 ## Entity Mapping
 
@@ -46,8 +53,8 @@ Shared Flows in Apigee are a reusable collection of policies in a specific order
 
 Apigee Entity |	Azure APIM Entity
 --------------|------------------
-Api Proxy |	API
-Proxy Endpoints |	N/A
+Api Proxy |	API*
+Proxy Endpoints |	API*
 Target Endpoints |	Endpoints
 Flows |	API Operations
 Proxy endpoint pre-flow and post-flow policies |	API level inbound and outbound policies
@@ -57,21 +64,30 @@ API Product | API Product
 Unencrypted Key Value Maps | Named Values
 Encrypted Key Value Maps | Named Values marked as secret (can point to a secret in an Azure Key Vault instance)
 
+\* It is possible to have an API Proxy with multiple Proxy Endpoints in Apigee. Each Proxy Endpoint will be migrated as an API in APIM and the name of the Proxy Endpoint Will be appended to the name of the API.
+
 ## Policy Mapping
 
-The most challenging part of this tool and where it adds real value is Policy Transformation. Apigee To APIM Migration Tool reads all Apigee policies and transforms them into Azure APIM policies. It includes all variable and secret references and complex conditions that use Apigee expressions. As of now, 10 types of policies are supported.
+The most challenging part of this tool, and where it adds real value, is Policy Transformation. The Apigee-to-APIM Migration Tool reads all Apigee policies and transforms them into Azure APIM policies. This includes all variable and secret references, as well as complex conditions that use Apigee expressions. The list of supported policies is as follows:
 
 Apigee Policy	| Azure APIM Policy |	Description
 --------------|-------------------|------------
 Assign Message |	Set Header & Set Body |	Add or remove request headers or body
 Lookup Cache |	Cache Lookup Value |	Get a cached value from cache store
 Populate Cache |	Cache Store Value |	Store new value in the cache store
+Invalidate Cache | Cache Remove Value | Configures how the cached values should be purged from the cache
 KeyValue Map Operations |	Set Variable |	Read variables from named values and assign to a variable
 Verify JWT |	Validate Jwt |	Validate a JWT token using encryption key
 Service Callout |	Send Request |	Call an HTTP endpoint
 Extract Variables |	Set Variable| Read JSON object, extract values and assign to variables. Requires custom expression in Azure APIM
 OAuthV2	Validate | Jwt	Validate | JWT policy in APIM can be configured to validate OAuth
 Flow Callout |	Include Fragment |	Call Policy Fragment
+Access Control | Ip Filter | Allow or deny access to your APIs by specific IP addresses
+Basic Authentication | Authentication Basic | Authenticate with a backend service using Basic authentication. The policy also lets you decode credentials stored in a Base64 encoded string into a username and password
+Raise Fault | Return Response | Generates a custom message in response to an error condition
+Spike Arrest | Rate Limit By Key or Rate Limit | Protects against traffic surges
+
+All policies not listed above will be ignored during the migration process.
 
 ## Azure APIM Configuration
 
