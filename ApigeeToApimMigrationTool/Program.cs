@@ -57,6 +57,10 @@ var apigeeConfigDirOption = new Option<string>(
     name: "--apigeeConfigDir",
     description: "Specify a local directory to load the Apigee configuration bundle from (optional)");
 
+var useApigeeDisplayName = new Option<bool>(
+    name: "--useApigeeDisplayName",
+    description: "true or false, If set to true then the name of API in Azure APIM will be defined using the display name of the API Proxy in Apigee instead of name. (optional)");
+
 // Entra (Azure AD) Options
 var azureAppIdOption = new Option<string>(
     name: "--azureAppId",
@@ -138,6 +142,7 @@ var rootCommand = new RootCommand("Apigee to Azure APIM migration tool")
     proxyOrProductNameOption,
     apigeeEnvironmentNameOption,
     apigeeConfigDirOption,
+    useApigeeDisplayName,
     azureAppIdOption,
     azurePasswordOption,
     azureTenantIdOption,
@@ -161,7 +166,7 @@ rootCommand.SetHandler(async (apigeeConfig, entraConfig, apimConfig, keyVaultNam
 
     await RunMigration(apigeeConfig, entraConfig, apimConfig, keyVaultName, databaseConnectionString, configFile);
 }, 
-new ApigeeConfigurationBinder(apigeeOrgNameOption, apigeeAuthenticationBaseUrlOption, apigeeManagementApiBaseUrlOption, apigeePasscodeOption, apigeeUsernameOption, apigeePasswordOption, proxyOrProductOption, proxyOrProductNameOption, apigeeEnvironmentNameOption, apigeeConfigDirOption),
+new ApigeeConfigurationBinder(apigeeOrgNameOption, apigeeAuthenticationBaseUrlOption, apigeeManagementApiBaseUrlOption, apigeePasscodeOption, apigeeUsernameOption, apigeePasswordOption, proxyOrProductOption, proxyOrProductNameOption, apigeeEnvironmentNameOption, apigeeConfigDirOption, useApigeeDisplayName),
 new EntraConfigurationBinder(azureAppIdOption, azurePasswordOption, azureTenantIdOption, azureSubscriptionIdOption), 
 new ApimConfigurationBinder(apimUrlOption, apimNameOption, apimResourceGroupOption, apimOauthConfigNameOption, apimOauthBackendAppIdOption, apimOauthTenantIdOption, apimOauthAudienceOption, apimOauthIssuersOption, apimOauthScopeClaimNameOption), 
 keyVaultNameOption, databaseConnectionStringOption, configFileOption);
