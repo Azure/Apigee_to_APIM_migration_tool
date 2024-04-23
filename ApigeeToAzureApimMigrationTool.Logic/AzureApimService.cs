@@ -31,9 +31,11 @@ namespace ApigeeToAzureApimMigrationTool.Service
             var apiProxyElement = apiProxyXml.Element("APIProxy");
             string apiName = apiProxyElement.Attribute("name").Value;
             string revision = apiProxyElement.Attribute("revision").Value;
-            //string basePath = apiProxyElement.Element("Basepaths").Value;
-            string displayName = apiProxyElement.Element("DisplayName").Value;
-            string description = apiProxyElement.Element("Description").Value;
+            string displayName = apiProxyElement.Element("DisplayName")?.Value;
+            string description = apiProxyElement.Element("Description")?.Value;
+
+            if (apigeeConfiguration.UseApigeeDisplayName && !string.IsNullOrEmpty(displayName))
+                apiName = displayName;
 
 
             var targetEndpointElements = apiProxyElement.Element("TargetEndpoints").Elements("TargetEndpoint");
