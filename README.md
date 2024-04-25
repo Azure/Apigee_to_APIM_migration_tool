@@ -20,6 +20,7 @@ All required options are mandetory and must be supplied.
 | --proxyOrProductName          | Name of the proxy or product you'd like to migrate                                                  | Yes      |
 | --apigeeEnvironmentName       | Apigee environment name                                                                             | Yes      |
 | --apigeeConfigDir             | Specify a local directory to load the Apigee configuration bundle from                              | No       |
+| --useApigeeDisplayName        | true or false, If set to true then the name of API in Azure APIM will be defined using the display name of the API Proxy in Apigee instead of name. (optional) | No |
 | --azureAppId                  | Azure service principal App ID                                                                      | Yes      |
 | --azurePassword               | Azure service principal Password                                                                     | Yes      |
 | --azureTenantId               | Azure Tenant ID                                                                                     | Yes      |
