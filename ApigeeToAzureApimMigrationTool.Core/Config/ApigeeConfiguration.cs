@@ -19,5 +19,6 @@ namespace ApigeeToApimMigrationTool.Core.Config
         public string? EnvironmentName { get; set; }
         public string? ConfigDir { get; set; }
         public bool UseTestService { get; set; }
+        public bool UseApigeeDisplayName { get; set; }
     }
 }

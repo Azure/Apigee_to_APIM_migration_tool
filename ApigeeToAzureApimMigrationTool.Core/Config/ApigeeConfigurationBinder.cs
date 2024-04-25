@@ -20,6 +20,7 @@ namespace ApigeeToApimMigrationTool.Core.Config
         private readonly Option<string> _proxyOrProductNameOption;
         private readonly Option<string> _environmentNameOption;
         private readonly Option<string> _configDirOption;
+        private readonly Option<bool> _useApigeeDisplayName;
 
         public ApigeeConfigurationBinder(
             Option<string> organizationNameOption,
@@ -31,7 +32,8 @@ namespace ApigeeToApimMigrationTool.Core.Config
             Option<string> proxyOrProductOption,
             Option<string> proxyOrProductNameOption,
             Option<string> environmentNameOption,
-            Option<string> configDirOption)
+            Option<string> configDirOption,
+            Option<bool> useApigeeDisplayName)
         {
             _organizationNameOption = organizationNameOption;
             _authenticationBaseUrlOption = authenticationBaseUrlOption;
@@ -43,6 +45,7 @@ namespace ApigeeToApimMigrationTool.Core.Config
             _proxyOrProductNameOption = proxyOrProductNameOption;
             _environmentNameOption = environmentNameOption;
             _configDirOption = configDirOption;
+            _useApigeeDisplayName = useApigeeDisplayName;
         }
 
         protected override ApigeeConfiguration GetBoundValue(BindingContext bindingContext) =>
@@ -58,6 +61,7 @@ namespace ApigeeToApimMigrationTool.Core.Config
                 ProxyOrProductName = bindingContext.ParseResult.GetValueForOption(_proxyOrProductNameOption),
                 EnvironmentName = bindingContext.ParseResult.GetValueForOption(_environmentNameOption),
                 ConfigDir = bindingContext.ParseResult.GetValueForOption(_configDirOption),
+                UseApigeeDisplayName = bindingContext.ParseResult.GetValueForOption(_useApigeeDisplayName)
             };
     }
 }
